@@ -7,7 +7,7 @@ mlflow server --port 5000
 
 2. run the script
 ``` bash
-python train.py \
+python lr_demo.py \
   --data_path ../data/mobile-reviews.csv \
   --experiment_name "Sentiment LR" \
   --registered_model_name "sentiment-logreg" \
