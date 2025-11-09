@@ -1,0 +1,8 @@
+lib/mlruns
+*/.env
+.env
+config
+plugins
+logs
+downloads
+*/__pycache__
