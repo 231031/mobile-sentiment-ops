@@ -38,7 +38,7 @@ with DAG(
     compare_model_task = PythonVirtualenvOperator(
         task_id="model_comparison",
         python_callable=compare_models,
-        requirements=["mlflow","pandas","scikit-learn","numpy","matplotlib","seaborn"],
+        requirements=["mlflow","pandas","scikit-learn","numpy","matplotlib","seaborn","xgboost"],
         python_version="3.10",
     )
 
