@@ -32,13 +32,13 @@ with DAG(
     def compare_models():
         import sys
         sys.path.append("/opt/airflow/lib")
-        from lib.lr_demo_dags import main
+        from lib.train_with_dags import main
         main()
     
     compare_model_task = PythonVirtualenvOperator(
         task_id="model_comparison",
         python_callable=compare_models,
-        requirements=["mlflow","pandas","scikit-learn","numpy","matplotlib","seaborn"],
+        requirements=["mlflow","pandas","scikit-learn","numpy","matplotlib","seaborn","xgboost"],
         python_version="3.10",
     )
 
