@@ -2,7 +2,7 @@ import json
 import tempfile
 from pathlib import Path
 import os
-from lib.config import *
+from app.config import *
 
 import mlflow
 import mlflow.sklearn as mlflow_sklearn

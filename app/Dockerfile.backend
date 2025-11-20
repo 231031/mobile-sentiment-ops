@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+
+# CHANGE: Use a clear name like 'backend' instead of 'code'
+WORKDIR /backend
+
+# Install system libraries
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python deps
+# Note: We copy from the host's 'app/' folder to the container's '/backend/'
+COPY app/requirement.txt .
+RUN pip install --no-cache-dir -r requirement.txt
+
+# Copy the ENTIRE project context
+COPY . .
+
+# Expose the port
+EXPOSE 5001
+
+# Run command (Module path is relative to WORKDIR /backend)
+CMD ["uvicorn", "app.ml_server:app", "--host", "0.0.0.0", "--port", "5001"]

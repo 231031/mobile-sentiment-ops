@@ -1,0 +1,47 @@
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.5.1
+    container_name: mlflow-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - mlflow_mlrun:/mlruns
+      - mlflow_mlartifacts:/mlartifacts
+    environment:
+      MLFLOW_SERVER_ALLOWED_HOSTS: "*"
+    command: >
+      mlflow server
+      --host 0.0.0.0 
+      --port 8000
+    networks:
+      - backend
+
+  labelstudio:
+    image: heartexlabs/label-studio:1.21.0
+    container_name: labelstudio-server # Correct key
+    ports:
+      - "8080:8080"
+    volumes:
+      - label_studio_data:/label-studio/data
+    networks:
+      - backend
+    environment:
+      - LABEL_STUDIO_HOST=${LABEL_STUDIO_HOST}
+      - LABEL_STUDIO_DB=${LABEL_STUDIO_DB}
+      - POSTGRES_NAME=${POSTGRES_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+  
+  # from backend prod image
+  # from frontend prod image
+
+volumes:
+  label_studio_data:
+  mlflow_mlrun:
+  mlflow_mlartifacts:
+
+networks:
+  backend:
+    driver: bridge
