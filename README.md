@@ -17,6 +17,8 @@ This project is created as part of the subject **CPE393 - MLOps**, demonstrating
 ## Initial Project
 
 - run ```docker-compose -f docker-compose.test.yml up -d``` to start mlflow, gcs-emulator
+- run ```docker-compose -f docker-compose.test.yml down``` down all services
+- run ```docker-compose -f docker-compose.test.yml down -v``` down all services and delete all backup
 
 ## Access UI
 
@@ -26,30 +28,10 @@ This project is created as part of the subject **CPE393 - MLOps**, demonstrating
 
 ## Project Dir
 
-.
-├── .github/
-├── app/
-├── dags/
-├── data/
-├── db_init/
-└── lib/
-
 ### `app/`  *(FastAPI model serving + drift monitoring + retraining trigger)*
 
 This folder contains the **production serving application**.  
 It loads the Production model from MLflow, serves prediction requests, checks drift, and can trigger retraining.
-
-- `__init__.py`  
-  Marks `app/` as a Python package so modules can be imported cleanly.
-
-- `config.py`  
-  Central configuration file.  
-  Stores constants and environment-based settings such as:
-  - MLflow tracking URI
-  - bucket/service endpoints (GCS/MinIO)
-  - column names (`REVIEW_COLUMN`, `TARGET_COLUMN`)
-  - alias name (`Production`)
-  - report paths, Label Studio URL, etc.
 
 - `data_pipeline.py`  
   **DataHandler**  
