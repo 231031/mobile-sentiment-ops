@@ -25,6 +25,19 @@ class MLOpsHandler:
             # Save Bootstrap Reference
             # We call _upload_safe to handle the emulator 404 quirks
             self.dataHandler._upload_safe(f"data_label/labeled_BOOTSTRAP_{timestamp}.csv", df[[REVIEW_COLUMN, TARGET_COULUM]].to_csv(index=False), 'text/csv')
+
+            # EDA artifact (logs to MLflow under artifact path "eda")
+            try:
+                # Ensure the experiment exists before starting the run (default experiment may be missing in fresh mlflow server)
+                mlflow.set_experiment("Sentiment_Analysis_Production")
+                with mlflow.start_run(run_name=f"EDA_bootstrap_{timestamp}"):
+                    self.dataHandler.run_full_eda(
+                        df=df,
+                        label_column=TARGET_COULUM,
+                        report_prefix=""
+                    )
+            except Exception as exc:
+                print(f"⚠️ Skipping EDA logging due to error: {exc}")
             
             # PREPARE AND TRAIN
             df = df.dropna(subset=[REVIEW_COLUMN, TARGET_COULUM]).reset_index(drop=True)
