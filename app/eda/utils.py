@@ -13,8 +13,8 @@ from app.config import REPORTS_DIR
 # ---------- Path / saving helpers ----------
 def timestamped_path(base_name: str, prefix: str, ext: str) -> Tuple[str, Path]:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    prefix_tag = f"{prefix}_" if prefix else ""
-    return timestamp, REPORTS_DIR / f"{base_name}_{prefix_tag}{timestamp}.{ext}"
+    # File names keep only base + timestamp for readability; prefix (if any) is used by caller for foldering
+    return timestamp, REPORTS_DIR / f"{base_name}_{timestamp}.{ext}"
 
 
 def save_json_report(payload: Dict[str, Any], base_name: str, report_prefix: str) -> Dict[str, Any]:

@@ -34,7 +34,7 @@ class MLOpsHandler:
                     self.dataHandler.run_full_eda(
                         df=df,
                         label_column=TARGET_COULUM,
-                        report_prefix=""
+                        report_prefix=f"bootstrap_{timestamp}"
                     )
             except Exception as exc:
                 print(f"⚠️ Skipping EDA logging due to error: {exc}")
