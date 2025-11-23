@@ -34,7 +34,27 @@ services:
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=${POSTGRES_PORT}
   
-  # from backend prod image
+  backend:
+    container_name: backend-mlserver
+    image: ghcr.io/231031/mobile-sentiment-ops/mlops_mbs_backend:${DOCKER_TAG}
+    env_file:
+      - .env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      GCS_BUCKET_NAME: ${GCS_BUCKET_NAME}
+      REPORTS_DIR: ${REPORTS_DIR}
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
+      INITIAL_DATA_PATH: ${INITIAL_DATA_PATH}
+      PYTHONPATH: /backend
+    volumes:
+      - ./app/credential.json:/backend/credential.json
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    networks:
+      - backend
+
   # from frontend prod image
 
 volumes:

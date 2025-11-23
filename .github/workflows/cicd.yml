@@ -7,9 +7,10 @@ on:
 
 jobs:
   build:
-    name: Build and Push Custom Images
-    runs-on: ubuntu
+    name: Build and Push Images
+    runs-on: self-hosted
     permissions:
+      contents: read
       packages: write
 
     steps:
@@ -49,38 +50,37 @@ jobs:
         run: |
           # This command builds 'backend' and 'frontend' services
           # It creates local images named 'mlops_backend:latest' and 'mlops_frontend:latest'
-          docker-compose -p mlops -f ./docker-compose.yml build backend frontend
+          docker compose -p mlops -f ./docker-compose.yml build backend
 
       # --- NEW: Tag both services ---
       - name: Tag images
         run: |
           # Tag Backend
-          docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mobile_sentiment_backend:latest
-          docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mobile_sentiment_backend:${{ steps.set_tag.outputs.tag }}
-          
-          # Tag Frontend
-          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mobile_sentiment_frontend:latest
-          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mobile_sentiment_frontend:${{ steps.set_tag.outputs.tag }}
+          docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
+          docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
 
       # --- NEW: Push all 4 tags ---
       - name: Push images to GitHub Container Registry
         run: |
           # Push Backend
-          docker push ghcr.io/${{ github.repository }}/mobile_sentiment_backend:latest
-          docker push ghcr.io/${{ github.repository }}/mobile_sentiment_backend:${{ steps.set_tag.outputs.tag }}
-
-          # Push Frontend
-          docker push ghcr.io/${{ github.repository }}/mobile_sentiment_frontend:latest
-          docker push ghcr.io/${{ github.repository }}/mobile_sentiment_frontend:${{ steps.set_tag.outputs.tag }}
+          docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
+          docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
 
     outputs:
-      docker_tag: ${{ steps.set_tag.outputs.tag }} # This unique tag is used for deployment
+      docker_tag: ${{ steps.set_tag.outputs.tag }} 
 
   deploy:
     name: Deploy to Production
     needs: build
     runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: read
+
     steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -93,20 +93,40 @@ jobs:
         working-directory: ./
         run: |
           # This creates the .env file from scratch with all required values
-
+          echo 'GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}' > .env
+          echo 'GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' >> .env
+          echo 'GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}' >> .env
+          echo 'MLFLOW_TRACKING_URI=${{ vars.MLFLOW_TRACKING_URI }}' >> .env
+          echo 'REPORTS_DIR=${{ vars.REPORTS_DIR }}' >> .env
+          echo 'INITIAL_DATA_PATH=${{ vars.INITIAL_DATA_PATH }}' >> .env
+          echo 'DOCKER_TAG=${{ needs.build.outputs.docker_tag }}' >> .env
+          # echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' >> .env
+          # echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env
+          # echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env
+          # echo 'POSTGRE_NAME=${{ secrets.POSTGRE_NAME }}' >> .env
+          # echo 'POSTGRE_HOST=${{ secrets.POSTGRE_HOST }}' >> .env
+          # echo 'LABEL_STUDIO_USERNAME=${{ secrets.LABEL_STUDIO_USERNAME }}' >> .env
+          # echo 'LABEL_STUDIO_PASSWORD=${{ secrets.LABEL_STUDIO_PASSWORD }}' >> .env
+          # echo 'LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK=${{ secrets.LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK }}' >> .env
+      
+      - name: Create credential.json file
+        working-directory: ./app
+        run: |
+          echo '${{ secrets.CREDENTIAL }}' > credential.json
+              
       # --- UPDATED: Use docker-compose.prod.yml ---
       - name: Delete old docker container
-        run: docker-compose -p mlops -f docker-compose.prod.yml down -v
+        run: docker compose -p mlops -f docker-compose.prod.yml down -v
 
       - name: Deploy to server
         working-directory: ./
         run: |
           # This command is now correct!
           # It pulls the new backend/frontend images using the DOCKER_TAG from the .env file
-          docker-compose -p mlops -f docker-compose.prod.yml pull backend frontend
+          docker compose -p mlops -f docker-compose.prod.yml pull backend
           
           # This brings up the entire stack, including the new images
-          docker-compose -p mlops -f docker-compose.prod.yml up -d
+          docker compose -p mlops -f docker-compose.prod.yml up -d
 
       # --- UPDATED: Better check and cleanup ---
       - name: Check and Delete unused images
@@ -115,8 +135,7 @@ jobs:
           echo "Checking running containers for project 'mlops'..."
           
           # This command checks if services 'backend' and 'frontend' are in a 'running' state
-          if docker-compose -p mlops -f docker-compose.prod.yml ps --status running | grep 'backend' \
-            && docker-compose -p mlops -f docker-compose.prod.yml ps --status running | grep 'frontend'; then
+          if docker compose -p mlops -f docker-compose.prod.yml ps --status running | grep 'backend'; then
             
             echo "Containers are running successfully. Proceeding to cleanup..."
             # This is the safest way to remove old, unused images
@@ -124,6 +143,6 @@ jobs:
           
           else
             echo "Deployment check failed: Containers not running. Skipping image cleanup."
-            docker-compose -p mlops -f docker-compose.prod.yml ps
+            docker compose -p mlops -f docker-compose.prod.yml ps
             exit 1
           fi
