@@ -25,10 +25,30 @@ export default function CsvUploadCard() {
     if (droppedFile) setFile(droppedFile);
   };
 
-  const processCsv = () => {
+  const processCsv = async () => {
     if (!file) return alert("Please upload a CSV file first!");
     console.log("Processing CSV:", file);
-    // TODO: ส่งไป backend ของคุณเลย เช่นใช้ FormData
+
+    try {
+      setIsAnalyzing(true)
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/predict", {
+        method: "POST",
+        body: formData,
+      }) 
+
+      const data = await res.text()
+      console.log(data)
+    } catch (err) {
+      console.log(err)
+    } finally {
+      setIsAnalyzing(false)
+    }
+    
+
   };
 
   return (
