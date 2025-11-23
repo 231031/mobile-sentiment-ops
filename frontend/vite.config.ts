@@ -1,10 +1,8 @@
-import { defineConfig } from 'vite'
-import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [
-    tailwindcss(),
-  ],
+  plugins: [tailwindcss()],
   server: {
     host: true,
     port: 5173,
@@ -13,11 +11,11 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "http://api-model-server:5001", // Use container name
+        target: "http://backend:5001", // Use container name
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ""),
-      }
-    }
-  }
-})
+      },
+    },
+  },
+});

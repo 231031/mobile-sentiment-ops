@@ -75,8 +75,9 @@ services:
       - mlops-net
 
   # --- 5. Your API ---
-  api:
-    container_name: api-model-server
+  backend:
+    container_name: backend-model-server
+    image: mlops_backend:latest
     build:
       context: .
       dockerfile: app/Dockerfile.backend
@@ -115,7 +116,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
-      - api
+      - backend
     networks:
       - mlops-net
 

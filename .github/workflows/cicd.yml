@@ -50,7 +50,7 @@ jobs:
         run: |
           # This command builds 'backend' and 'frontend' services
           # It creates local images named 'mlops_backend:latest' and 'mlops_frontend:latest'
-          docker compose -p mlops -f ./docker-compose.yml build backend
+          docker compose -p mlops -f ./docker-compose.test.yml build backend
 
       # --- NEW: Tag both services ---
       - name: Tag images
