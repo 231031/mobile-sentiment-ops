@@ -80,6 +80,7 @@ services:
     build:
       context: .
       dockerfile: app/Dockerfile.backend
+    command: uvicorn app.ml_server:app --host 0.0.0.0 --port 5001 --reload
     ports:
       - "5001:5001"
     env_file:

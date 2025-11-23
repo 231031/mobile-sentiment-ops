@@ -37,7 +37,6 @@ export default function AnalysisResultPage() {
         const firstPageIndex = (currentPage - 1) * rowsPerPage;
         const lastPageIndex = firstPageIndex + rowsPerPage;
 
-        // Slice ข้อมูลเฉพาะส่วนที่ต้องแสดง
         return data.slice(firstPageIndex, lastPageIndex);
     }, [data, currentPage, rowsPerPage]);
 
@@ -57,8 +56,8 @@ export default function AnalysisResultPage() {
     const endIndex = Math.min(currentPage * rowsPerPage, data.length);
 
     return (
-        <div className="p-8 h-screen bg-gray-100 overflow-auto">
-            <div className="max-w-7xl mx-auto bg-white shadow-lg rounded-xl p-8">
+        <div className="p-8 h-screen bg-gray-100 overflow-auto grid grid-cols-12 gap-4">
+            <div className="col-start-3 col-end-11 bg-white rounded-xl p-8">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center space-x-4">
                         <button

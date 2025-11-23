@@ -10,6 +10,7 @@ class PredictionHandler:
         self.dataHandler = DataHandler()
         self.production_model = None
         self.id_to_label = None
+        self.metrics = {}
         
     def find_any_production_model(self, alias: str = ALIAS) -> str | None:
         """
@@ -22,6 +23,15 @@ class PredictionHandler:
                 mv = client.get_model_version_by_alias(name, alias)
                 # if alias doesn't exist for this model, this raises -> we skip
                 print(f"Found model with @{alias}: {name} (version {mv.version})")
+
+                # Fetch run metrics
+                try:
+                    run = client.get_run(mv.run_id)
+                    self.metrics = run.data.metrics
+                    print(f"Loaded metrics: {self.metrics}")
+                except Exception as e:
+                    print(f"Could not fetch metrics for run {mv.run_id}: {e}")
+                    self.metrics = {}
 
                 # get label encoder
                 model_key = name.split("-")[-1]

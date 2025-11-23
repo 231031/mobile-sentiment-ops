@@ -1,6 +1,8 @@
 import pandas as pd
 from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Response
+from pydantic import BaseModel
+from typing import List, Dict
 import mlflow
 from contextlib import asynccontextmanager
 
@@ -38,7 +40,67 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# --- Endpoints ---
+
+class TextRequest(BaseModel):
+    text: str
+
+class PredictionResponse(BaseModel):
+    text: str
+    prediction: str
+    confidence: float
+    probabilities: Dict[str, float]
+
+@app.post("/predict_json", response_model=PredictionResponse)
+async def predict_json(request: TextRequest):
+    # Prepare data
+    df_input = pd.DataFrame([request.text], columns=[REVIEW_COLUMN])
+    
+    if predictHandler.production_model is None:
+        return {
+            "text": request.text,
+            "prediction": "model_not_found",
+            "confidence": 0.0,
+            "probabilities": {}
+        }
+
+    # Predict
+    y_pred = predictHandler.production_model.predict(df_input[REVIEW_COLUMN])
+    
+    # Try to get probabilities if supported
+    try:
+        y_proba = predictHandler.production_model.predict_proba(df_input[REVIEW_COLUMN])
+        max_proba = float(y_proba[0].max())
+        
+        probs = {}
+        if predictHandler.id_to_label:
+            for i, prob in enumerate(y_proba[0]):
+                label = predictHandler.id_to_label.get(i, str(i))
+                probs[label] = float(prob)
+        else:
+             for i, prob in enumerate(y_proba[0]):
+                probs[str(i)] = float(prob)
+                
+    except AttributeError:
+        max_proba = 1.0 # Fallback
+        probs = {}
+
+    # Map prediction to label
+    predicted_id = int(y_pred[0])
+    predicted_label = predictHandler.id_to_label.get(predicted_id, str(predicted_id)) if predictHandler.id_to_label else str(predicted_id)
+
+    return {
+        "text": request.text,
+        "prediction": predicted_label,
+        "confidence": max_proba,
+        "probabilities": probs
+    }
+
+@app.get("/model/metrics")
+async def get_metrics():
+    if predictHandler.metrics:
+        return predictHandler.metrics
+    return {"error": "No metrics available"}
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     request_id = datetime.now().strftime("%Y%m%d_%H%M%S")
