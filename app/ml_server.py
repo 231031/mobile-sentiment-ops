@@ -4,10 +4,10 @@ from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Response
 import mlflow
 from contextlib import asynccontextmanager
 
-from app.prediction import PredictionHandler
-from app.train_model import MLOpsHandler
-from app.data_pipeline import DataHandler
-from app.config import *
+from .prediction import PredictionHandler
+from .train_model import MLOpsHandler
+from .data_pipeline import DataHandler
+from .config import *
 
 mlops = MLOpsHandler()
 predictHandler = PredictionHandler()

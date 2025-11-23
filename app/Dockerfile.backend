@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y \
 COPY app/requirement.txt .
 RUN pip install --no-cache-dir -r requirement.txt
 
-# Copy the ENTIRE project context
-COPY . .
+# Copy the app code
+COPY app /backend/app
 
 # Expose the port
 EXPOSE 5001

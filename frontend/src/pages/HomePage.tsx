@@ -32,7 +32,7 @@ export default function Home() {
           <img src={csvIcon} className="size-10" />
           <p className="text-2xl">CSV Upload </p>
           <p className="text-gray-400"> Process large dataset with batch sentiment analysis</p>
-          <Button label=" Upload CSV " to="/csv-upload" />
+          <Button label=" Upload CSV " to="/csv-upload" className="w-full"/>
         </div>
       </div>
 

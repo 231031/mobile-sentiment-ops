@@ -16,7 +16,7 @@ services:
     networks:
       - mlops-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,11 +24,7 @@ services:
   # --- 2. GCS Emulator ---
   gcs-emulator:
     image: fsouza/fake-gcs-server
-    command: [
-      "-scheme", "http",
-      "-port", "4443",
-      "-external-url", "http://gcs-emulator:4443",
-    ]
+    command: [ "-scheme", "http", "-port", "4443", "-external-url", "http://gcs-emulator:4443" ]
     ports:
       - "4443:4443"
     volumes:
@@ -45,9 +41,7 @@ services:
     environment:
       MLFLOW_SERVER_ALLOWED_HOSTS: "*"
     command: >
-      mlflow server 
-      --host 0.0.0.0
-      --port 8000
+      mlflow server  --host 0.0.0.0 --port 8000
     volumes:
       - mlflow_mlrun:/mlruns
       - mlflow_mlartifacts:/mlartifacts
@@ -101,9 +95,23 @@ services:
       - ./data:/backend/data
       - ./report:/backend/report
       - ./lib:/backend/lib
+      - ./app:/backend/app
     depends_on:
       - mlflow
       - gcs-emulator
+    networks:
+      - mlops-net
+
+  # --- 6. Frontend ---
+  frontend:
+    container_name: mlops-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
     networks:
       - mlops-net
 
@@ -113,6 +121,7 @@ volumes:
   mlflow_mlrun:
   mlflow_mlartifacts:
   storage_data:
+
 
 networks:
   mlops-net:
