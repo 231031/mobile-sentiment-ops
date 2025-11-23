@@ -15,6 +15,7 @@ def text_length_eda(
     length_column: str = "text_length_chars",
     report_prefix: str = "text_length",
 ) -> Dict[str, Any]:
+    """Summarize text length stats overall and by label, save as JSON."""
     if df is None or df.empty:
         raise ValueError("Input dataframe is empty. Cannot run text length EDA.")
 
@@ -44,6 +45,7 @@ def text_length_charts(
     length_column: str = "text_length_chars",
     report_prefix: str = "text_length",
 ) -> Dict[str, Any]:
+    """Generate boxplot figures for text length across labels."""
     length_col = ensure_text_length_column(df, review_column, length_column)
     if length_col not in df.columns:
         raise ValueError(f"Length column '{length_col}' not found.")
