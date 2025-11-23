@@ -1,5 +1,7 @@
 import json
-from evidently import Report, Dataset, DataDefinition
+
+import mlflow
+from evidently import Dataset, DataDefinition, Report
 from evidently.presets import DataDriftPreset
 
 from app.config import *
@@ -55,6 +57,13 @@ class PredictionHandler:
             except Exception:
                 continue
         return None
+
+    def refresh_production_model(self, alias: str = ALIAS) -> str | None:
+        uri = self.find_any_production_model(alias=alias)
+        if not uri:
+            return None
+        self.production_model = mlflow.sklearn.load_model(uri)
+        return uri
     
     def check_data_drift(self, ref_df, cur_df, request_id):
         html_path = REPORTS_DIR / f"drift_{request_id}.html"

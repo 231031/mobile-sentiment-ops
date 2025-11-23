@@ -7,3 +7,5 @@ logs
 downloads
 report
 */__pycache__
+.venv
+mlruns

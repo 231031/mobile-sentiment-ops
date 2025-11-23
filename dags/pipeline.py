@@ -32,7 +32,7 @@ with DAG(
     def compare_models():
         import sys
         sys.path.append("/opt/airflow/lib")
-        from lib.train_with_dags import main
+        from train_with_dags import main
         main()
     
     compare_model_task = PythonVirtualenvOperator(
