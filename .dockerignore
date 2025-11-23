@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+.venv/
+env/
+
+# Logs
+logs/
+*.log
+
+# Data (don't bake large data into image)
+data/
+downloads/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile*

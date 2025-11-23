@@ -121,7 +121,8 @@ def build_pipelines(args):
 def train_eval_log(model_key, pipe, X_train, y_train, X_val, y_val, class_names, args, label_encoder):
     model_names = {"lr": "LogisticRegression", "rf": "RandomForest", "xgb": "XGBoost"}
     run_name = model_names[model_key]
-    registered_name = f"{args.registered_model_name}-{model_key}"
+    # Use a single registered model name for all algorithms to facilitate easy promotion/comparison
+    registered_name = args.registered_model_name
 
     with mlflow.start_run(run_name=run_name):
         # ---- Train
@@ -238,6 +239,7 @@ def train_eval_log(model_key, pipe, X_train, y_train, X_val, y_val, class_names,
         )
 
         print(f"[{run_name}] run_id={mlflow.active_run().info.run_id} | registered_name={registered_name}")
+        return mlflow.active_run().info.run_id, metrics
 
 
 def main():
