@@ -37,6 +37,7 @@ export default function TextFieldAnalysis() {
 
             const data = await res.json();
             setResult(data.prediction);
+            console.log(data)
         } catch (err) {
             console.error("Error analyzing text:", err);
             setResult("Error");
@@ -60,7 +61,10 @@ export default function TextFieldAnalysis() {
                     type="text"
                     placeholder="Type or paste your text here..."
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
+                    onChange={(e) => {
+                        setText(e.target.value)
+                        setResult(undefined)
+                    }}
                     className="bg-gray-100 w-full h-42 mb-4 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400"
                 />
 

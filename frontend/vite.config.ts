@@ -6,12 +6,17 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    host: true,
+    port: 5173,
+    watch: {
+      usePolling: true,
+    },
     proxy: {
       "/api": {
-        target: "http://localhost:5001",
+        target: "http://api-model-server:5001", // Use container name
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, ""), 
+        rewrite: (path) => path.replace(/^\/api/, ""),
       }
     }
   }
