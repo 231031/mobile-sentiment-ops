@@ -5,4 +5,5 @@ config
 plugins
 logs
 downloads
+report
 */__pycache__

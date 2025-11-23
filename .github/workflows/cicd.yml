@@ -1,0 +1,129 @@
+name: Deploy MLOps Stack
+
+on:
+  push:
+    branches:
+      - xxx # Your main branch
+
+jobs:
+  build:
+    name: Build and Push Custom Images
+    runs-on: ubuntu
+    permissions:
+      packages: write
+
+    steps:
+      - name: clean unncessary files to save space
+        run: |
+          docker image prune -f
+          sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php /etc/sudo apt/sources.list.d
+          sudo apt -y autoremove --purge
+          sudo apt -y autoclean
+          sudo apt clean
+          rm --recursive --force "$AGENT_TOOLSDIRECTORY"
+
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set Docker tag output (short SHA with timestamp)
+        id: set_tag
+        run: |
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TAG="$SHORT_SHA-$TIMESTAMP"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      # --- NEW: Build both services ---
+      - name: Build backend and frontend images
+        id: build-images
+        run: |
+          # This command builds 'backend' and 'frontend' services
+          # It creates local images named 'mlops_backend:latest' and 'mlops_frontend:latest'
+          docker-compose -p mlops -f ./docker-compose.yml build backend frontend
+
+      # --- NEW: Tag both services ---
+      - name: Tag images
+        run: |
+          # Tag Backend
+          docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mobile_sentiment_backend:latest
+          docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mobile_sentiment_backend:${{ steps.set_tag.outputs.tag }}
+          
+          # Tag Frontend
+          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mobile_sentiment_frontend:latest
+          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mobile_sentiment_frontend:${{ steps.set_tag.outputs.tag }}
+
+      # --- NEW: Push all 4 tags ---
+      - name: Push images to GitHub Container Registry
+        run: |
+          # Push Backend
+          docker push ghcr.io/${{ github.repository }}/mobile_sentiment_backend:latest
+          docker push ghcr.io/${{ github.repository }}/mobile_sentiment_backend:${{ steps.set_tag.outputs.tag }}
+
+          # Push Frontend
+          docker push ghcr.io/${{ github.repository }}/mobile_sentiment_frontend:latest
+          docker push ghcr.io/${{ github.repository }}/mobile_sentiment_frontend:${{ steps.set_tag.outputs.tag }}
+
+    outputs:
+      docker_tag: ${{ steps.set_tag.outputs.tag }} # This unique tag is used for deployment
+
+  deploy:
+    name: Deploy to Production
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- UPDATED: Create .env file for deployment ---
+      - name: Create .env file
+        working-directory: ./
+        run: |
+          # This creates the .env file from scratch with all required values
+
+      # --- UPDATED: Use docker-compose.prod.yml ---
+      - name: Delete old docker container
+        run: docker-compose -p mlops -f docker-compose.prod.yml down -v
+
+      - name: Deploy to server
+        working-directory: ./
+        run: |
+          # This command is now correct!
+          # It pulls the new backend/frontend images using the DOCKER_TAG from the .env file
+          docker-compose -p mlops -f docker-compose.prod.yml pull backend frontend
+          
+          # This brings up the entire stack, including the new images
+          docker-compose -p mlops -f docker-compose.prod.yml up -d
+
+      # --- UPDATED: Better check and cleanup ---
+      - name: Check and Delete unused images
+        run: |
+          sleep 5
+          echo "Checking running containers for project 'mlops'..."
+          
+          # This command checks if services 'backend' and 'frontend' are in a 'running' state
+          if docker-compose -p mlops -f docker-compose.prod.yml ps --status running | grep 'backend' \
+            && docker-compose -p mlops -f docker-compose.prod.yml ps --status running | grep 'frontend'; then
+            
+            echo "Containers are running successfully. Proceeding to cleanup..."
+            # This is the safest way to remove old, unused images
+            docker image prune -f
+          
+          else
+            echo "Deployment check failed: Containers not running. Skipping image cleanup."
+            docker-compose -p mlops -f docker-compose.prod.yml ps
+            exit 1
+          fi
