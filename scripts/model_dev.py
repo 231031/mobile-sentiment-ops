@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -43,7 +44,7 @@ def parse_args():
     p.add_argument("--data_path", required=True, help="CSV path with columns: review_text, sentiment")
     p.add_argument("--experiment_name", default="Sentiment CLS")
     p.add_argument("--registered_model_name", default="sentiment")
-    p.add_argument("--tracking_uri", default=None)
+    p.add_argument("--tracking_uri", default=os.getenv("MLFLOW_TRACKING_URI"))
     p.add_argument("--test_size", type=float, default=0.5)
     p.add_argument("--random_state", type=int, default=42)
     p.add_argument("--max_features", type=int, default=300)
@@ -151,12 +152,15 @@ def train_eval_log(model_key, pipe, X_train, y_train, X_val, y_val, class_names,
         }
         for k, v in metrics.items():
             mlflow.log_metric(k, v)
-
+        print(mlflow.get_registry_uri())
+        print(mlflow.active_run())
+        
         # Optional ROC-AUC for binary
         if len(class_names) == 2 and hasattr(pipe, "predict_proba"):
             try:
                 y_score = pipe.predict_proba(X_val)[:, 1]
                 mlflow.log_metric("roc_auc", float(roc_auc_score(y_val, y_score)))
+                
             except Exception:
                 pass
 
@@ -256,6 +260,8 @@ def main():
     args = parse_args()
     if args.tracking_uri:
         mlflow.set_tracking_uri(args.tracking_uri)
+    else:
+        print("[warn] No tracking URI supplied; defaulting to local ./mlruns store. Use --tracking_uri or set MLFLOW_TRACKING_URI to log against the MLflow server.")
     mlflow.set_experiment(args.experiment_name)
 
     # Load & clean data

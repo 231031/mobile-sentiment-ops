@@ -13,6 +13,18 @@ mlops = MLOpsHandler()
 predictHandler = PredictionHandler()
 dataHandler = DataHandler()
 
+
+def _retrain_background_job():
+    try:
+        summary = mlops.train_model()
+        if summary.get("promoted"):
+            refreshed = predictHandler.refresh_production_model()
+            print(f"Retraining finished and Production updated: {refreshed}")
+        else:
+            print(f"Retraining finished without promotion: {summary.get('promotion_context')}")
+    except Exception as exc:
+        print(f"Retraining failed: {exc}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # STARTUP
@@ -24,14 +36,19 @@ async def lifespan(app: FastAPI):
 
     prod_uri = predictHandler.find_any_production_model()
     try:
+        if not prod_uri:
+            raise ValueError("No Production model found")
         predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
         print("✅ System Startup: Existing Production model loaded.")
     except Exception:
         print("❌ System Not Startup: Cannot find any Production Model")
         mlops.train_startup_model()
         prod_uri = predictHandler.find_any_production_model()
-        predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
-        print("the Production model is loaded")
+        if prod_uri:
+            predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
+            print("the Production model is loaded")
+        else:
+            print("Critical: Failed to load Production model even after startup training.")
     
     yield # App runs here
     print("🛑 LIFESPAN: Shutting down...")
@@ -79,7 +96,7 @@ async def predict(file: UploadFile = File(...)):
             if drift_share > 0.5:
                 print(f"data drift is more than threshold - wait for data is labeled : {drift_share}")
                 drift_detected = True
-                # do something
+                FastAPI.post("/retrain")
             else:
                 print(f"data drift is not more than threshold - use the same model : {drift_share}")
 
@@ -103,7 +120,5 @@ async def predict(file: UploadFile = File(...)):
 
 @app.post("/retrain")
 async def trigger_retrain(background_tasks: BackgroundTasks):
-    # get datadrift file from the same request id of folder data_wait_label and wait for save to the one artifact
-    # background task in retraining at off-peak times of that day
-    # if the best model change - loaded new model
-    return {"status": "Retraining started (Fresh Data Only)."}
+    background_tasks.add_task(_retrain_background_job)
+    return {"status": "Retraining scheduled"}
