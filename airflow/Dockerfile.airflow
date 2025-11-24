@@ -1,0 +1,18 @@
+# Dockerfile
+FROM apache/airflow:3.1.3
+
+USER root
+
+# 1) Install OS packages
+RUN apt-get update && apt-get install -y unzip git curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/
+
+# 2) Copy your kaggle.json into place (you should have it next to this Dockerfile)
+COPY kaggle.json /root/.kaggle/kaggle.json
+RUN chmod 600 /root/.kaggle/kaggle.json
+
+USER airflow
+
+# 3) Copy the rest of your DAGs / code
+COPY . .
