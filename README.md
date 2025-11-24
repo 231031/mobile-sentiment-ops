@@ -23,7 +23,7 @@ This project is created as part of the subject **CPE393 - MLOps**, demonstrating
 ## Access UI
 
 - <http://localhost:8000> - mlflow
-- <http://localhost:8081> - label studio
+- <http://localhost:8080> - airflow username: airflow, password: airflow
 - <http://localhost:5001> - Fast API with /predict and /retrain
 
 ## Project Dir

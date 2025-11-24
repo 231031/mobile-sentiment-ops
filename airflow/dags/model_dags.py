@@ -5,7 +5,7 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 
 # Put these where you like in your Airflow directory:
 DATA_DIR   = "/opt/airflow/data"
-TMP_DIR    = "/opt/airflow/tmp/"
+TMP_DIR    = "/opt/airflow/tmp"
 DATASET_ID = "mohankrishnathalla/mobile-reviews-sentiment-and-specification"
 OUTPUT     = f"{DATA_DIR}/mobile-reviews.csv"
 
@@ -40,21 +40,20 @@ with DAG(
         ls -la
 
         unzip -o "{TMP_DIR}/mobile-reviews-sentiment-and-specification.zip" -d {TMP_DIR}
-        rm -rf "{TMP_DIR}"
 
         echo "Listing files in tmp after unzip:"
         ls -la
 
         # 4) Move to the final location. Try the expected filename first,
         mv "{TMP_DIR}/Mobile Reviews Sentiment.csv" "{OUTPUT}"
+
+        rm -rf "{TMP_DIR}"
         """,
     )
 
     model_pipeline = BashOperator(
         task_id="model_pipeline",
         bash_command=f"""
-        pip install --no-cache-dir -e /opt/airflow/lib
-        
         echo "Starting model pipeline with data from {OUTPUT}"
         python /opt/airflow/lib/main.py --data_path "{OUTPUT}"
         """,
