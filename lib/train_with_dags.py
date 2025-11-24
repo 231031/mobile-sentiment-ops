@@ -10,6 +10,8 @@ from mlflow.models import infer_signature
 
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg') # Set non-interactive backend
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 from types import SimpleNamespace
@@ -92,14 +94,14 @@ def build_pipelines(args):
         ("tfidf", tfidf),
         ("clf", LogisticRegression(
             penalty="l2", C=2.0, solver="lbfgs",
-            max_iter=100, class_weight=None, n_jobs=-1))
+            max_iter=100, class_weight=None, n_jobs=1))
     ])
 
     rf = Pipeline([
         ("tfidf", tfidf),
         ("to_dense", Densifier()),
         ("clf", RandomForestClassifier(
-            n_estimators=100, max_depth=6, random_state=42, n_jobs=-1))
+            n_estimators=100, max_depth=6, random_state=42, n_jobs=1))
     ])
 
     models = {"lr": lr, "rf": rf}
@@ -109,7 +111,7 @@ def build_pipelines(args):
             ("to_dense", FunctionTransformer(lambda X: X.toarray(), accept_sparse=True)),
             ("clf", XGBClassifier(
                 learning_rate=0.01, n_estimators=100,
-                subsample=0.5, random_state=42, n_jobs=-1))
+                subsample=0.5, random_state=42, n_jobs=1))
         ])
         models["xgb"] = xgb
     return models

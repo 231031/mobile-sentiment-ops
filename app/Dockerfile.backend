@@ -5,10 +5,11 @@ WORKDIR /backend
 
 # Install system libraries
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+  build-essential \
+  curl \
+  git \
+  libgomp1 \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps
 # Note: We copy from the host's 'app/' folder to the container's '/backend/'
