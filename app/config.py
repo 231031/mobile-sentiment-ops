@@ -16,6 +16,7 @@ Path("/backend/temp").mkdir(parents=True, exist_ok=True)
 MODEL_NAME = "MobileSentimentModel"
 ALIAS = "Production"
 XGB_AVAILABLE=True
+FORCE_RETRAIN_ON_PREDICT = os.getenv("FORCE_RETRAIN_ON_PREDICT", "false").lower() == "true"
 
 REVIEW_COLUMN = 'review_text'
 TARGET_COULUM = 'sentiment'

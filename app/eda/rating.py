@@ -14,6 +14,7 @@ def rating_vs_sentiment_eda(
     label_column: str = TARGET_COULUM,
     report_prefix: str = "rating_sentiment",
 ) -> Dict[str, Any]:
+    """Summarize rating stats overall and by sentiment label; save as JSON."""
     if df is None or df.empty:
         raise ValueError("Input dataframe is empty. Cannot run rating vs sentiment EDA.")
 
@@ -61,6 +62,7 @@ def rating_vs_sentiment_charts(
     label_column: str = TARGET_COULUM,
     report_prefix: str = "rating_sentiment",
 ) -> Dict[str, Any]:
+    """Plot mean bars and boxplots of rating versus sentiment labels."""
     results = {
         "mean_bar_chart": {"report_path": None, "logged_to_mlflow": False},
         "boxplot": {"report_path": None, "logged_to_mlflow": False},

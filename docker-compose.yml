@@ -60,7 +60,8 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY:-changeme}
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
@@ -390,11 +391,103 @@ services:
     command: server --address ":9001" --console-address ":9000" /data
     networks:
       - backend
+  db:
+    container_name: mlops-db
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - .env
+    volumes:
+      - labelstudio_db_data:/var/lib/postgresql/data
+      - ./db_init/init.sh:/docker-entrypoint-initdb.d/init.sh
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  gcs-emulator:
+    image: fsouza/fake-gcs-server
+    command: [
+      "-scheme", "http",
+      "-port", "4443",
+      "-external-url", "http://gcs-emulator:4443",
+    ]
+    ports:
+      - "4443:4443"
+    volumes:
+      - storage_data:/storage
+    networks:
+      - backend
+
+  label-studio:
+    container_name: labelstudio-server
+    image: heartexlabs/label-studio:1.21.0
+    ports:
+      - "8081:8080"
+    environment:
+      DJANGO_DB: default
+      POSTGRE_NAME: ${POSTGRE_NAME}
+      POSTGRE_USER: ${POSTGRES_USER}
+      POSTGRE_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRE_HOST: ${POSTGRE_HOST}
+      POSTGRE_PORT: 5432
+      LABEL_STUDIO_USERNAME: ${LABEL_STUDIO_USERNAME}
+      LABEL_STUDIO_PASSWORD: ${LABEL_STUDIO_PASSWORD}
+      LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK: ${LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK}
+    volumes:
+      - label_studio_data:/label-studio/data
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+
+  api:
+    container_name: api-model-server
+    build:
+      context: .
+      dockerfile: app/Dockerfile.backend
+    ports:
+      - "5001:5001"
+    env_file:
+      - .env
+    environment:
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI}
+      GCS_ENDPOINT: ${GCS_STORAGE_EMULATOR_HOST}
+      GCS_BUCKET_NAME: ${GCS_BUCKET_NAME}
+      REPORTS_DIR: ${REPORTS_DIR}
+      INITIAL_DATA_PATH: ${INITIAL_DATA_PATH}
+      PYTHONPATH: /backend
+    volumes:
+      - ./data:/backend/data
+      - ./report:/backend/report
+      - ./lib:/backend/lib
+    depends_on:
+      - mlflow
+      - gcs-emulator
+    networks:
+      - backend
 
 volumes:
   postgres-db-volume:
   minio_backup:
+  label_studio_data:
+  labelstudio_db_data:
+  mlflow_mlrun:
+  mlflow_mlartifacts:
+  storage_data:
 
 networks:
   backend:
+    driver: bridge
+  mlops-net:
     driver: bridge

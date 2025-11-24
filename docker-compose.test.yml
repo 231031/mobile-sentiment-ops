@@ -340,38 +340,10 @@ services:
     depends_on:
       <<: *airflow-common-depends-on
 
-  # You can enable flower by adding "--profile flower" option e.g. docker-compose --profile flower up
-  # or by explicitly targeted on the command line e.g. docker-compose up flower.
-  # See: https://docs.docker.com/compose/profiles/
-  flower:
-    <<: *airflow-common
-    command: celery flower
-    profiles:
-      - flower
-    ports:
-      - "5555:5555"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: always
-    networks:
-      - mlops-net
-    depends_on:
-      <<: *airflow-common-depends-on
-      airflow-init:
-        condition: service_completed_successfully
-
   # --- 2. GCS Emulator ---
   gcs-emulator:
     image: fsouza/fake-gcs-server
-    command: [
-      "-scheme", "http",
-      "-port", "4443",
-      "-external-url", "http://gcs-emulator:4443",
-    ]
+    command: [ "-scheme", "http", "-port", "4443", "-external-url", "http://gcs-emulator:4443" ]
     ports:
       - "4443:4443"
     volumes:
@@ -388,9 +360,7 @@ services:
     environment:
       MLFLOW_SERVER_ALLOWED_HOSTS: "*"
     command: >
-      mlflow server 
-      --host 0.0.0.0
-      --port 8000
+      mlflow server  --host 0.0.0.0 --port 8000
     volumes:
       - mlflow_mlrun:/mlruns
       - mlflow_mlartifacts:/mlartifacts
@@ -398,11 +368,13 @@ services:
       - mlops-net
 
   # --- 5. Your API ---
-  api:
-    container_name: api-model-server
+  backend:
+    container_name: backend-model-server
+    image: mlops_backend:latest
     build:
       context: .
       dockerfile: app/Dockerfile.backend
+    command: uvicorn app.ml_server:app --host 0.0.0.0 --port 5001 --reload
     ports:
       - "5001:5001"
     env_file:
@@ -418,9 +390,26 @@ services:
       - ./data:/backend/data
       - ./report:/backend/report
       - ./lib:/backend/lib
+      - ./app:/backend/app
     depends_on:
       - mlflow
       - gcs-emulator
+    networks:
+      - mlops-net
+
+  # --- 6. Frontend ---
+  frontend:
+    container_name: mlops-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
     networks:
       - mlops-net
 
@@ -429,6 +418,7 @@ volumes:
   mlflow_mlartifacts:
   storage_data:
   postgres-db-volume:
+
 
 networks:
   mlops-net:

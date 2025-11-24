@@ -93,13 +93,99 @@ class MLOpsHandler:
     def train_model(self):
         training_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         print(f"--- Retraining Sequence ID: {training_id} ---")
-        
         mlflow.set_experiment("Sentiment_Analysis_Production")
         
-        # data from use for retrain
+        # 1. Get Data (Prefer latest labeled data, fallback to initial)
+        df = self.dataHandler.get_lastest_file(prefix="data_label/labeled_")
+        if df.empty:
+            print("No new labeled data found. Using Initial Data.")
+            if os.path.exists(INITIAL_DATA_PATH):
+                df = pd.read_csv(INITIAL_DATA_PATH)
+            else:
+                return {"status": "failed", "reason": "No data available"}
+        else:
+             print(f"Using latest labeled data.")
 
-        # 2. Archive the Fresh Data Snapshot (For Record Keeping)
-        # We save this specific export as a CSV to data_label
+        # 2. Prepare Data
+        df = df.dropna(subset=[REVIEW_COLUMN, TARGET_COULUM]).reset_index(drop=True)
+        le = LabelEncoder()
+        df[TARGET_COULUM] = le.fit_transform(df[TARGET_COULUM])
+        class_names = list(le.classes_)
+
+        args = SimpleNamespace(
+            max_features=300,
+            registered_model_name=MODEL_NAME,
+            test_size=0.2, 
+            random_state=42,
+        )
+
+        train_df, val_df = train_test_split(
+            df, test_size=args.test_size, stratify=df[TARGET_COULUM], random_state=args.random_state
+        )
+
+        # 3. Train Candidates
+        pipelines = build_pipelines(args)
+        order = ["lr", "rf"] + (["xgb"] if XGB_AVAILABLE else [])
         
-        # archive_name = f"data_label/labeled_{training_id}.csv"
-        # self.dataHandler._upload_safe(archive_name, df_fresh[[REVIEW_COLUMN, TARGET_COULUM]].to_csv(index=False), 'text/csv')
+        best_new_score = -1
+        best_new_run_id = None
+        best_model_key = None
+
+        for key in order:
+            run_id, metrics = train_eval_log(
+                model_key=key, pipe=pipelines[key],
+                X_train=train_df[REVIEW_COLUMN], y_train=train_df[TARGET_COULUM],
+                X_val=val_df[REVIEW_COLUMN], y_val=val_df[TARGET_COULUM],
+                class_names=class_names, args=args, label_encoder=le
+            )
+            # Use macro_f1 as the primary metric
+            score = metrics.get("macro_f1", 0)
+            if score > best_new_score:
+                best_new_score = score
+                best_new_run_id = run_id
+                best_model_key = key
+
+        print(f"Best New Model: {best_model_key} (Run: {best_new_run_id}, Score: {best_new_score:.4f})")
+
+        # 4. Compare with Production
+        promoted = False
+        promotion_context = "No improvement"
+        
+        try:
+            # Check if Production alias exists
+            prod_model = client.get_model_version_by_alias(MODEL_NAME, "Production")
+            prod_run = client.get_run(prod_model.run_id)
+            prod_score = prod_run.data.metrics.get("macro_f1", 0)
+            print(f"Current Production Score: {prod_score:.4f}")
+            
+            if best_new_score > prod_score:
+                print("🚀 New model is better! Promoting...")
+                # Demote old Production to Staging
+                client.set_registered_model_alias(MODEL_NAME, "Staging", prod_model.version)
+                # Promote new to Production
+                versions = client.search_model_versions(f"run_id='{best_new_run_id}'")
+                if versions:
+                    client.set_registered_model_alias(MODEL_NAME, "Production", versions[0].version)
+                    promoted = True
+                    promotion_context = f"Promoted v{versions[0].version} (Score: {best_new_score:.4f}) over v{prod_model.version} (Score: {prod_score:.4f})"
+            else:
+                print("New model is not better. Keeping current Production.")
+                promotion_context = f"Kept v{prod_model.version} (Score: {prod_score:.4f}) >= New (Score: {best_new_score:.4f})"
+
+        except Exception as e:
+            # No production model exists, or error fetching it
+            print(f"Production model check failed ({e}). Promoting new model as first Production.")
+            versions = client.search_model_versions(f"run_id='{best_new_run_id}'")
+            if versions:
+                client.set_registered_model_alias(MODEL_NAME, "Production", versions[0].version)
+                promoted = True
+                promotion_context = "First Production Model"
+
+        return {
+            "status": "success",
+            "training_id": training_id,
+            "best_run_id": best_new_run_id,
+            "best_score": best_new_score,
+            "promoted": promoted,
+            "promotion_context": promotion_context
+        }

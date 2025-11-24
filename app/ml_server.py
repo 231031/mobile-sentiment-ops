@@ -1,17 +1,31 @@
 import pandas as pd
 from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Response
+from pydantic import BaseModel
+from typing import List, Dict
 import mlflow
 from contextlib import asynccontextmanager
 
-from app.prediction import PredictionHandler
-from app.train_model import MLOpsHandler
-from app.data_pipeline import DataHandler
-from app.config import *
+from .prediction import PredictionHandler
+from .train_model import MLOpsHandler
+from .data_pipeline import DataHandler
+from .config import *
 
 mlops = MLOpsHandler()
 predictHandler = PredictionHandler()
 dataHandler = DataHandler()
+
+
+def _retrain_background_job():
+    try:
+        summary = mlops.train_model()
+        if summary.get("promoted"):
+            refreshed = predictHandler.refresh_production_model()
+            print(f"Retraining finished and Production updated: {refreshed}")
+        else:
+            print(f"Retraining finished without promotion: {summary.get('promotion_context')}")
+    except Exception as exc:
+        print(f"Retraining failed: {exc}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,21 +38,86 @@ async def lifespan(app: FastAPI):
 
     prod_uri = predictHandler.find_any_production_model()
     try:
+        if not prod_uri:
+            raise ValueError("No Production model found")
         predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
         print("✅ System Startup: Existing Production model loaded.")
     except Exception:
         print("❌ System Not Startup: Cannot find any Production Model")
         mlops.train_startup_model()
         prod_uri = predictHandler.find_any_production_model()
-        predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
-        print("the Production model is loaded")
+        if prod_uri:
+            predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
+            print("the Production model is loaded")
+        else:
+            print("Critical: Failed to load Production model even after startup training.")
     
     yield # App runs here
     print("🛑 LIFESPAN: Shutting down...")
 
 app = FastAPI(lifespan=lifespan)
 
-# --- Endpoints ---
+
+class TextRequest(BaseModel):
+    text: str
+
+class PredictionResponse(BaseModel):
+    text: str
+    prediction: str
+    confidence: float
+    probabilities: Dict[str, float]
+
+@app.post("/predict_json", response_model=PredictionResponse)
+async def predict_json(request: TextRequest):
+    # Prepare data
+    df_input = pd.DataFrame([request.text], columns=[REVIEW_COLUMN])
+    
+    if predictHandler.production_model is None:
+        return {
+            "text": request.text,
+            "prediction": "model_not_found",
+            "confidence": 0.0,
+            "probabilities": {}
+        }
+
+    # Predict
+    y_pred = predictHandler.production_model.predict(df_input[REVIEW_COLUMN])
+    
+    # Try to get probabilities if supported
+    try:
+        y_proba = predictHandler.production_model.predict_proba(df_input[REVIEW_COLUMN])
+        max_proba = float(y_proba[0].max())
+        
+        probs = {}
+        if predictHandler.id_to_label:
+            for i, prob in enumerate(y_proba[0]):
+                label = predictHandler.id_to_label.get(i, str(i))
+                probs[label] = float(prob)
+        else:
+             for i, prob in enumerate(y_proba[0]):
+                probs[str(i)] = float(prob)
+                
+    except AttributeError:
+        max_proba = 1.0 # Fallback
+        probs = {}
+
+    # Map prediction to label
+    predicted_id = int(y_pred[0])
+    predicted_label = predictHandler.id_to_label.get(predicted_id, str(predicted_id)) if predictHandler.id_to_label else str(predicted_id)
+
+    return {
+        "text": request.text,
+        "prediction": predicted_label,
+        "confidence": max_proba,
+        "probabilities": probs
+    }
+
+@app.get("/model/metrics")
+async def get_metrics():
+    if predictHandler.metrics:
+        return predictHandler.metrics
+    return {"error": "No metrics available"}
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     request_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -79,7 +158,7 @@ async def predict(file: UploadFile = File(...)):
             if drift_share > 0.5:
                 print(f"data drift is more than threshold - wait for data is labeled : {drift_share}")
                 drift_detected = True
-                # do something
+                FastAPI.post("/retrain")
             else:
                 print(f"data drift is not more than threshold - use the same model : {drift_share}")
 
@@ -103,7 +182,5 @@ async def predict(file: UploadFile = File(...)):
 
 @app.post("/retrain")
 async def trigger_retrain(background_tasks: BackgroundTasks):
-    # get datadrift file from the same request id of folder data_wait_label and wait for save to the one artifact
-    # background task in retraining at off-peak times of that day
-    # if the best model change - loaded new model
-    return {"status": "Retraining started (Fresh Data Only)."}
+    background_tasks.add_task(_retrain_background_job)
+    return {"status": "Retraining scheduled"}

@@ -17,6 +17,7 @@ def word_frequency_eda(
     report_prefix: str = "word_freq",
     top_n: int = 20,
 ) -> Dict[str, Any]:
+    """Compute top token frequencies per label and save as JSON report."""
     if df is None or df.empty:
         raise ValueError("Input dataframe is empty. Cannot run word frequency EDA.")
     ensure_columns(df, [review_column, label_column])
@@ -44,6 +45,7 @@ def word_frequency_charts(
     report_prefix: str = "word_freq",
     top_n: int = 10,
 ) -> Dict[str, Any]:
+    """Plot bar charts for top tokens per label from frequency payload."""
     results = {}
     for lbl, items in freq_payload.get("top_words_by_label", {}).items():
         if not items:
@@ -62,3 +64,36 @@ def word_frequency_charts(
         results[lbl] = {"report_path": saved["report_path"], "logged_to_mlflow": saved["logged_to_mlflow"]}
 
     return {"bar_charts": results}
+
+
+def word_cloud_charts(
+    freq_payload: dict,
+    report_prefix: str = "word_freq",
+) -> Dict[str, Any]:
+    """Generate word clouds per label from frequency payload."""
+    try:
+        from wordcloud import WordCloud
+    except ImportError:
+        return {"wordclouds": {}, "error": "wordcloud package not installed"}
+
+    results = {}
+    for lbl, items in freq_payload.get("top_words_by_label", {}).items():
+        if not items:
+            continue
+        freqs = {entry["word"]: entry["count"] for entry in items if "word" in entry and "count" in entry}
+        if not freqs:
+            continue
+
+        wc = WordCloud(width=800, height=400, background_color="white", colormap="viridis")
+        wc.generate_from_frequencies(freqs)
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.imshow(wc, interpolation="bilinear")
+        ax.axis("off")
+        ax.set_title(f"Word cloud for label = {lbl}")
+
+        safe_lbl = re.sub(r'[^a-zA-Z0-9]+', '_', lbl)
+        saved = save_figure(fig, f"eda_wordcloud_{safe_lbl}", report_prefix)
+        results[lbl] = {"report_path": saved["report_path"], "logged_to_mlflow": saved["logged_to_mlflow"]}
+
+    return {"wordclouds": results}

@@ -16,6 +16,7 @@ def overview_eda(
     report_prefix: str = "overview",
     length_column: str = "text_length_chars",
 ) -> Dict[str, Any]:
+    """Build a dataset overview (shape, dtypes, missingness, duplicates, rating info)."""
     if df is None or df.empty:
         raise ValueError("Input dataframe is empty. Cannot generate EDA overview.")
 
@@ -79,6 +80,7 @@ def sentiment_bar_chart(
     label_summary: dict,
     report_prefix: str = "sentiment_bar",
 ) -> Dict[str, Any]:
+    """Plot sentiment distribution bar chart from label_summary counts."""
     if not label_summary or "counts" not in label_summary:
         raise ValueError("label_summary with counts is required.")
 
