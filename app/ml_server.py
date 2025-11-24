@@ -15,7 +15,7 @@ from .config import *
 mlops = MLOpsHandler()
 predictHandler = PredictionHandler()
 dataHandler = DataHandler()
-
+background_tasks: BackgroundTasks
 
 def _retrain_background_job():
     try:
@@ -167,7 +167,7 @@ async def predict(file: UploadFile = File(...)):
             if drift_share > 0.5:
                 print(f"data drift is more than threshold - wait for data is labeled : {drift_share}")
                 drift_detected = True
-                FastAPI.post("/retrain")
+                background_tasks.add_task(_retrain_background_job)
             else:
                 print(f"data drift is not more than threshold - use the same model : {drift_share}")
 

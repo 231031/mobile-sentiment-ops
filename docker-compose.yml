@@ -471,6 +471,7 @@ services:
       - ./data:/backend/data
       - ./report:/backend/report
       - ./lib:/backend/lib
+      - ./lib/mlruns:/mlruns
     depends_on:
       - mlflow
       - gcs-emulator

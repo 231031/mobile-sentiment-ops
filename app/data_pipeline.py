@@ -10,6 +10,7 @@ from app.eda.text_length import text_length_eda, text_length_charts
 from app.eda.word_freq import word_frequency_eda, word_frequency_charts, word_cloud_charts
 from app.eda.duplicates import duplicate_review_eda, duplicate_review_charts
 from app.eda.rating import rating_vs_sentiment_eda, rating_vs_sentiment_charts
+from app.eda.sentiment_brand import sentiment_brand_eda, sentiment_brand_charts
 
 storage_client = storage.Client(
     project="test-project", 
@@ -121,6 +122,12 @@ class DataHandler:
         rating_charts = rating_vs_sentiment_charts(df=df, rating_column="rating", label_column=label_column,
                                                    report_prefix=used_prefix)
 
+        brand_eda = sentiment_brand_eda(df=df, brand_column="brand", label_column=label_column,
+                                        report_prefix=used_prefix)
+
+        brand_charts = sentiment_brand_charts(df=df, brand_column="brand", label_column=label_column,
+                                              report_prefix=used_prefix)
+
         # Collect and upload EDA reports to storage
         def _collect_paths(obj):
             paths = []
@@ -147,6 +154,8 @@ class DataHandler:
             "duplicates_charts": duplicates_charts,
             "rating_overview": rating_eda,
             "rating_charts": rating_charts,
+            "brand_overview": brand_eda,
+            "brand_charts": brand_charts,
         })
         upload_prefix = f"reports/eda/{used_prefix}"
         for p in all_paths:
@@ -164,5 +173,7 @@ class DataHandler:
             "duplicates_charts": duplicates_charts,
             "rating_overview": rating_eda,
             "rating_charts": rating_charts,
+            "brand_overview": brand_eda,
+            "brand_charts": brand_charts,
         }
         return result

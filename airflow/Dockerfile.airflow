@@ -1,0 +1,25 @@
+FROM apache/airflow:3.1.1
+
+USER root
+
+# 1. Install system tools (gcc, build-essential) required to compile wordcloud
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    unzip \
+    git \
+    curl \
+    build-essential \
+    python3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+    
+    # 3. Handle Kaggle keys
+    COPY kaggle.json /home/airflow/.kaggle/kaggle.json
+    RUN chown airflow:root /home/airflow/.kaggle/kaggle.json \
+    && chmod 600 /home/airflow/.kaggle/kaggle.json
+    
+USER airflow
+
+COPY dags/lib/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
