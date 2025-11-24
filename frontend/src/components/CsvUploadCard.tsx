@@ -44,7 +44,6 @@ export default function CsvUploadCard() {
 
       const data = await res.text()
       
-      // console.log(data)
       navigate("/csv-result", { state: { csvData: data } });
     } catch (err) {
       console.log(err)

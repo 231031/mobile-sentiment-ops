@@ -56,7 +56,20 @@ services:
     networks:
       - mlops-nw
 
-  # from frontend prod image
+  frontend:
+    container_name: frontend-app
+    image: ghcr.io/231031/mobile-sentiment-ops/frontend:${DOCKER_TAG}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+    networks:
+      - mlops-nw
+    depends_on:
+      - backend
 
 volumes:
   label_studio_data:
