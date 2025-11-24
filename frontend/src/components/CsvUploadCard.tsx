@@ -37,7 +37,7 @@ export default function CsvUploadCard() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/predict", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/predict`, {
         method: "POST",
         body: formData,
       })

@@ -12,7 +12,7 @@ export default function MetricCards() {
     useEffect(() => {
         const fetchMetrics = async () => {
             try {
-                const res = await fetch("/api/model/metrics");
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/model/metrics`);
                 if (!res.ok) throw new Error("Failed to fetch metrics");
                 const data = await res.json();
 
