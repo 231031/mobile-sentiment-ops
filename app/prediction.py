@@ -49,14 +49,14 @@ class PredictionHandler:
                     model_type = run.data.tags.get("mlflow.runName")
                     model_key = map_model_type(model_type)
                     le_artifact = f"{model_key}__label_encoder.json"
-
+                     
                     # download the label encoder artifact from the run
                     local_path = client.download_artifacts(mv.run_id, le_artifact, "/backend/temp")
                     with open(local_path, "r", encoding="utf-8") as f:
                         le_payload = json.load(f)
 
                     classes = le_payload.get("classes_", [])
-                except:
+                except Exception as e:
                     print(f"Could not fetch label encoder : {e}")
 
                 if classes:

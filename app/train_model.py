@@ -47,7 +47,7 @@ class MLOpsHandler:
 
             args = SimpleNamespace(
                 max_features=300,
-                registered_model_name=MODEL_NAME,
+                registered_model_name=None,
                 test_size=0.5,
                 random_state=42,
             )
@@ -63,6 +63,7 @@ class MLOpsHandler:
             
             best_score = -1
             best_run_id = None
+            best_model_key = None
 
             for key in order:
                 train_eval_log(
@@ -75,9 +76,21 @@ class MLOpsHandler:
                 if last_run['metrics.accuracy'] > best_score:
                     best_score = last_run['metrics.accuracy']
                     best_run_id = last_run.run_id
+                    best_model_key = key
 
             if best_run_id:
                 print(f"Promoting Bootstrap Model (Run ID: {best_run_id}, Acc: {best_score:.4f})")
+                
+                # Register the best model explicitly
+                model_uri = f"runs:/{best_run_id}/{best_model_key}_model"
+                mv = mlflow.register_model(model_uri, MODEL_NAME)
+                
+                # Add version tag for clarity (since we can't change the integer version ID)
+                model_names = {"lr": "LogisticRegression", "rf": "RandomForest", "xgb": "XGBoost"}
+                algo_name = model_names.get(best_model_key, best_model_key)
+                client.set_model_version_tag(MODEL_NAME, mv.version, "algorithm", algo_name)
+                client.update_model_version(MODEL_NAME, mv.version, description=f"Algorithm: {algo_name}")
+                
                 versions = client.search_model_versions(f"run_id='{best_run_id}'")
                 if versions:
                     best_version = versions[0]
@@ -114,7 +127,7 @@ class MLOpsHandler:
 
         args = SimpleNamespace(
             max_features=300,
-            registered_model_name=MODEL_NAME,
+            registered_model_name=None,
             test_size=0.2, 
             random_state=42,
         )
@@ -122,7 +135,7 @@ class MLOpsHandler:
         train_df, val_df = train_test_split(
             df, test_size=args.test_size, stratify=df[TARGET_COULUM], random_state=args.random_state
         )
-
+        print("Training New Model.")
         # 3. Train Candidates
         pipelines = build_pipelines(args)
         order = ["lr", "rf"] + (["xgb"] if XGB_AVAILABLE else [])
@@ -131,6 +144,7 @@ class MLOpsHandler:
         best_new_run_id = None
         best_model_key = None
 
+        print("Evaluating candidate models...")
         for key in order:
             run_id, metrics = train_eval_log(
                 model_key=key, pipe=pipelines[key],
@@ -160,6 +174,17 @@ class MLOpsHandler:
             
             if best_new_score > prod_score:
                 print("🚀 New model is better! Promoting...")
+                
+                # Register the best model explicitly
+                model_uri = f"runs:/{best_new_run_id}/{best_model_key}_model"
+                mv = mlflow.register_model(model_uri, MODEL_NAME)
+                
+                # Add version tag
+                model_names = {"lr": "LogisticRegression", "rf": "RandomForest", "xgb": "XGBoost"}
+                algo_name = model_names.get(best_model_key, best_model_key)
+                client.set_model_version_tag(MODEL_NAME, mv.version, "algorithm", algo_name)
+                client.update_model_version(MODEL_NAME, mv.version, description=f"Algorithm: {algo_name}")
+
                 # Demote old Production to Staging
                 client.set_registered_model_alias(MODEL_NAME, "Staging", prod_model.version)
                 # Promote new to Production
@@ -175,6 +200,17 @@ class MLOpsHandler:
         except Exception as e:
             # No production model exists, or error fetching it
             print(f"Production model check failed ({e}). Promoting new model as first Production.")
+            
+            # Register the best model explicitly
+            model_uri = f"runs:/{best_new_run_id}/{best_model_key}_model"
+            mv = mlflow.register_model(model_uri, MODEL_NAME)
+            
+            # Add version tag
+            model_names = {"lr": "LogisticRegression", "rf": "RandomForest", "xgb": "XGBoost"}
+            algo_name = model_names.get(best_model_key, best_model_key)
+            client.set_model_version_tag(MODEL_NAME, mv.version, "algorithm", algo_name)
+            client.update_model_version(MODEL_NAME, mv.version, description=f"Algorithm: {algo_name}")
+
             versions = client.search_model_versions(f"run_id='{best_new_run_id}'")
             if versions:
                 client.set_registered_model_alias(MODEL_NAME, "Production", versions[0].version)
