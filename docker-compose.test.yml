@@ -111,7 +111,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
-      - "8080:5173"
+      - "5173:5173"
     env_file:
       - ./frontend/.env
     volumes:
