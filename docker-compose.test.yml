@@ -402,7 +402,7 @@ services:
     container_name: mlops-frontend
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     ports:
       - "5173:5173"
     env_file:
