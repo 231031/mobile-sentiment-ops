@@ -160,6 +160,6 @@ def evaluate_model(pipe, model_name, X_train, y_train, X_val, y_val):
     report = classification_report(y_val, y_pred, target_names=class_display_names, output_dict=True)
     mlflow.log_dict(report, f"{model_name}__classification_report.json")
     
-    # Evidently report
+    # Evidently report (data drift + classification performance)
     evidently_report(pipe, X_train, y_train, X_val, y_val)
     return metrics

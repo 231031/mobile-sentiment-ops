@@ -88,6 +88,7 @@ x-airflow-common:
     # - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     # - ${AIRFLOW_PROJ_DIR:-.}/downloads:/opt/airflow/downloads
     # - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/scripts:/opt/airflow/scripts
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/lib:/opt/airflow/lib
     - ${AIRFLOW_PROJ_DIR:-.}/airflow:/opt/airflow
   user: "${AIRFLOW_UID:-50000}:0"
@@ -297,7 +298,7 @@ services:
         echo
         echo "Files in shared volumes:"
         echo
-        ls -la /opt/airflow/{logs,dags,plugins,config}
+        ls -la /opt/airflow/{logs,config}
         echo
         echo "Change ownership of files in /opt/airflow to ${AIRFLOW_UID}:0"
         echo
@@ -305,11 +306,11 @@ services:
         echo
         echo "Change ownership of files in shared volumes to ${AIRFLOW_UID}:0"
         echo
-        chown -v -R "${AIRFLOW_UID}:0" /opt/airflow/{logs,dags,plugins,config}
+        chown -v -R "${AIRFLOW_UID}:0" /opt/airflow/{logs,config}
         echo
         echo "Files in shared volumes:"
         echo
-        ls -la /opt/airflow/{logs,dags,plugins,config}
+        ls -la /opt/airflow/{logs,config}
 
     # yamllint enable rule:line-length
     environment:
