@@ -5,8 +5,9 @@ import mlflow
 import tempfile
 import os
 
-from evidently import Report
-from evidently.presets import DataDriftPreset, DataSummaryPreset
+from evidently.report import Report
+from evidently.metric_preset import DataDriftPreset, TargetDriftPreset
+from evidently.pipeline.column_mapping import ColumnMapping
 
 from sklearn.base import clone
 from sklearn.preprocessing import StandardScaler
@@ -55,6 +56,50 @@ def plot_decision_boundary(model, X_sparse, y, label_names, title: str):
     return fig
 
 
+def evidently_report(pipe, X_train, y_train, X_val, y_val):
+    y_train_pred = pipe.predict(X_train)
+    tfidf = pipe.named_steps["tfidf"]
+    
+    def tfidf_features(X):
+        X_tfidf = tfidf.transform(X)
+        try:
+            X_arr = X_tfidf.toarray()
+        except Exception:
+            X_arr = X_tfidf
+        X_df = pd.DataFrame(X_arr, columns=tfidf.get_feature_names_out())
+        return X_df
+
+    # TF-IDF returns a sparse matrix; convert to dense array before creating DataFrame
+    X_train_tfidf = tfidf_features(X_train)
+    ref_df = pd.DataFrame({
+        "review_text": X_train,
+        "target": pd.Series(y_train).tolist(),
+    })
+    ref_df = pd.concat([ref_df.reset_index(drop=True), X_train_tfidf.reset_index(drop=True)], axis=1)
+    if y_train_pred is not None:
+        ref_df["prediction"] = pd.Series(y_train_pred).tolist()
+
+    y_pred = pipe.predict(X_val)
+    X_val_tfidf = tfidf_features(X_val)
+    curr_df = pd.DataFrame({
+        "review_text": X_val,
+        "target": pd.Series(y_val).tolist(),
+        "prediction": pd.Series(y_pred).tolist(),
+    })
+    curr_df = pd.concat([curr_df.reset_index(drop=True), X_val_tfidf.reset_index(drop=True)], axis=1)
+
+    column_mapping = ColumnMapping(target="target", prediction="prediction", 
+                                   text_features=["review_text"], 
+                                   numerical_features=X_train_tfidf.columns.tolist())
+    report = Report(metrics=[DataDriftPreset(), TargetDriftPreset()])
+    report.run(reference_data=ref_df, current_data=curr_df, column_mapping=column_mapping)
+        
+    HTML_PATH = "data_drift_report.html"
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_path = os.path.join(tmpdirname, HTML_PATH)
+        report.save_html(tmp_path)
+        mlflow.log_artifact(tmp_path, artifact_path=f"reports")
+
 # ==============
 # Utility
 # ==============
@@ -97,9 +142,7 @@ def evaluate_model(pipe, model_name, X_train, y_train, X_val, y_val):
         X_all_sparse = tfidf.transform(pd.concat([X_train, X_val]).tolist())
         y_all = np.concatenate([y_train, y_val])
 
-        # clone the pipeline's final estimator so the plot reflects the actual model type (LR/RF/XGB)
         plot_estimator = clone(pipe.named_steps["clf"])
-
         label_name_map = {val: name for val, name in zip(class_labels, class_display_names)}
         fig_db = plot_decision_boundary(
             model=plot_estimator,
@@ -117,29 +160,6 @@ def evaluate_model(pipe, model_name, X_train, y_train, X_val, y_val):
     report = classification_report(y_val, y_pred, target_names=class_display_names, output_dict=True)
     mlflow.log_dict(report, f"{model_name}__classification_report.json")
     
-    # Evidently report (data drift + classification performance)
-    y_train_pred = pipe.predict(X_train)
-    ref_df = pd.DataFrame({
-        "review_text": pd.Series(X_train).astype(str).tolist(),
-        "target": pd.Series(y_train).tolist(),
-    })
-    
-    if y_train_pred is not None:
-        ref_df["prediction"] = pd.Series(y_train_pred).tolist()
-
-    curr_df = pd.DataFrame({
-        "review_text": pd.Series(X_val).astype(str).tolist(),
-        "target": pd.Series(y_val).tolist(),
-        "prediction": pd.Series(y_pred).tolist(),
-    })
-
-    report = Report(metrics=[DataDriftPreset(), DataSummaryPreset()])
-    column_mapping = {"target": "target", "prediction": "prediction", "text_features": ["review_text"]}
-    report.run(reference_data=ref_df, current_data=curr_df, column_mapping=column_mapping)
-
-    # save to a temp file and log to mlflow
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".html") as tmp:
-        tmp_path = tmp.name
-        report.save_html(tmp_path)
-        mlflow.log_artifact(tmp_path, artifact_path=f"evidently/{model_name}")
+    # Evidently report
+    evidently_report(pipe, X_train, y_train, X_val, y_val)
     return metrics

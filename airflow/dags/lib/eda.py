@@ -97,7 +97,7 @@ def eda(
     brand_col: str = "brand",
     max_words: int = 200,
     log_to_mlflow: bool = True,
-    mlflow_run_name: Optional[str] = "Metadata",
+    mlflow_run_name: Optional[str] = "EDA",
 ) -> Dict[str, Any]:
     """Compute EDA summaries, create figures and (optionally) log to MLflow.
 
@@ -175,7 +175,7 @@ def eda(
 def _cli():
     p = argparse.ArgumentParser(description="Run EDA and log artifacts to MLflow.")
     p.add_argument("--data_path", required=True, help="Path to CSV file with review_text and sentiment columns")
-    p.add_argument("--mlflow_run_name", default="Metadata", required=False, help="Optional MLflow run name for EDA")
+    p.add_argument("--mlflow_run_name", default="EDA", required=False, help="Optional MLflow run name for EDA")
     p.add_argument("--experiment_name", default="Sentiment CLS", help="MLflow experiment name")
     args = p.parse_args()
 

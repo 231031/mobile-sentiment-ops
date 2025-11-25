@@ -10,8 +10,8 @@ from nltk.corpus import stopwords
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
-from model import build_pipelines, log_model_info
-from artifacts import evaluate_model
+from lib.model import build_pipelines, log_model_info, promote_best_model
+from lib.artifacts import evaluate_model
 
 
 # -----------------------
@@ -105,6 +105,7 @@ def main():
             args=args,
         )
     print("Logged artifacts to mlflow!")
+    promote_best_model(experiment_name=args.experiment_name, alias="Production")
 
 
 if __name__ == "__main__":
