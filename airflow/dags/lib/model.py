@@ -8,7 +8,7 @@ from mlflow.models import infer_signature
 import mlflow.sklearn as mlflow_sklearn
 
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 try:
@@ -24,11 +24,9 @@ def build_pipelines(max_features):
         ngram_range=(1, 2), max_features=max_features, min_df=2
     )
 
-    lr = Pipeline([
+    nb = Pipeline([
         ("tfidf", tfidf),
-        ("clf", LogisticRegression(
-            penalty="l2", C=2.0, solver="lbfgs",
-            max_iter=100, class_weight=None, n_jobs=-1))
+        ("clf", MultinomialNB(alpha=4.0, fit_prior=True))
     ])
 
     rf = Pipeline([
@@ -37,13 +35,14 @@ def build_pipelines(max_features):
             n_estimators=10, max_depth=3, random_state=42, n_jobs=-1))
     ])
 
-    models = {"lr": lr, "rf": rf}
+    models = {"nb": nb, "rf": rf}
     if XGB_AVAILABLE:
         xgb = Pipeline([
             ("tfidf", tfidf),
             ("clf", XGBClassifier(
+                objective="multi:softprob",
                 learning_rate=0.01, n_estimators=10,
-                max_depth=3, subsample=0.7, 
+                max_depth=3, subsample=0.5, 
                 random_state=42, n_jobs=-1))
         ])
         models["xgb"] = xgb

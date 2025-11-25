@@ -2,6 +2,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import mlflow
+import tempfile
+import os
+
+from evidently import Report
+from evidently.presets import DataDriftPreset, DataSummaryPreset
 
 from sklearn.base import clone
 from sklearn.preprocessing import StandardScaler
@@ -48,6 +53,7 @@ def plot_decision_boundary(model, X_sparse, y, label_names, title: str):
     ax.set_title(title)
     fig.tight_layout()
     return fig
+
 
 # ==============
 # Utility
@@ -110,4 +116,30 @@ def evaluate_model(pipe, model_name, X_train, y_train, X_val, y_val):
     # Classification report
     report = classification_report(y_val, y_pred, target_names=class_display_names, output_dict=True)
     mlflow.log_dict(report, f"{model_name}__classification_report.json")
+    
+    # Evidently report (data drift + classification performance)
+    y_train_pred = pipe.predict(X_train)
+    ref_df = pd.DataFrame({
+        "review_text": pd.Series(X_train).astype(str).tolist(),
+        "target": pd.Series(y_train).tolist(),
+    })
+    
+    if y_train_pred is not None:
+        ref_df["prediction"] = pd.Series(y_train_pred).tolist()
+
+    curr_df = pd.DataFrame({
+        "review_text": pd.Series(X_val).astype(str).tolist(),
+        "target": pd.Series(y_val).tolist(),
+        "prediction": pd.Series(y_pred).tolist(),
+    })
+
+    report = Report(metrics=[DataDriftPreset(), DataSummaryPreset()])
+    column_mapping = {"target": "target", "prediction": "prediction", "text_features": ["review_text"]}
+    report.run(reference_data=ref_df, current_data=curr_df, column_mapping=column_mapping)
+
+    # save to a temp file and log to mlflow
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".html") as tmp:
+        tmp_path = tmp.name
+        report.save_html(tmp_path)
+        mlflow.log_artifact(tmp_path, artifact_path=f"evidently/{model_name}")
     return metrics

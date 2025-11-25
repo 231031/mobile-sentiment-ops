@@ -3,6 +3,10 @@ import os
 
 import mlflow
 import pandas as pd
+
+import nltk
+nltk.download("stopwords")
+from nltk.corpus import stopwords
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
@@ -24,16 +28,26 @@ def parse_args():
     p.add_argument("--max_features", type=int, default=100)
     return p.parse_args()
 
+# -----------------------
+# Dataset
+# -----------------------
+def clean_text(text):
+    text = text.lower()
+    eng_stopwords = set(stopwords.words("english"))
+    tokens = [word for word in text.split() if word.isalpha() and word not in eng_stopwords]
+    return " ".join(tokens)
 
 def prepare_dataset(args):
-    df = pd.read_csv(args.data_path).dropna(subset=["review_text", "sentiment"]).reset_index(drop=True)
-
+    df = pd.read_csv(args.data_path).dropna(subset=["review_text", "sentiment"])
+    df = df.drop_duplicates(subset=["review_text"]).reset_index(drop=True)
+    df['review_text'] = df['review_text'].apply(clean_text)
+    
     # Encode labels
     le = LabelEncoder()
     df["sentiment"] = le.fit_transform(df["sentiment"])
     class_names = le.classes_.tolist()
-
-    # Split
+    
+    # split dataset
     train_df, val_df = train_test_split(
         df, test_size=args.test_size, stratify=df["sentiment"], random_state=args.random_state
     )
@@ -46,7 +60,7 @@ def prepare_dataset(args):
 def train_eval_log(model_key, pipe, 
                    X_train, y_train, X_val, y_val, 
                    class_names, args):
-    model_names = {"lr": "LogisticRegression", "rf": "RandomForest", "xgb": "XGBoost"}
+    model_names = {"nb": "NaiveBayes", "rf": "RandomForest", "xgb": "XGBoost"}
     run_name = model_names[model_key]
     registered_name = f"{args.registered_model_name}-{model_key}"
 
@@ -80,7 +94,7 @@ def main():
     pipelines = build_pipelines(args.max_features)
 
     # train and eval each model
-    order = ["lr", "rf"] + (["xgb"] if "xgb" in pipelines.keys() else [])
+    order = ["nb", "rf"] + (["xgb"] if "xgb" in pipelines.keys() else [])
     for key in order:
         train_eval_log(
             model_key=key,
@@ -90,7 +104,6 @@ def main():
             class_names=class_names,
             args=args,
         )
-
     print("Logged artifacts to mlflow!")
 
 

@@ -14,10 +14,11 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
     
-    # 3. Handle Kaggle keys
-    COPY kaggle.json /home/airflow/.kaggle/kaggle.json
-    RUN chown airflow:root /home/airflow/.kaggle/kaggle.json \
-    && chmod 600 /home/airflow/.kaggle/kaggle.json
+# 3. Handle Kaggle keys
+COPY kaggle.json /home/airflow/.kaggle/kaggle.json
+RUN chown airflow:root /home/airflow/.kaggle/kaggle.json \
+&& chmod 600 /home/airflow/.kaggle/kaggle.json
+    
     
 USER airflow
 

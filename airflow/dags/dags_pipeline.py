@@ -50,15 +50,22 @@ with DAG(
         rm -rf "{TMP_DIR}"
         """,
     )
+    
+    eda = BashOperator(
+        task_id="eda",
+        bash_command=f"""
+        python /opt/airflow/lib/eda.py --data_path "{OUTPUT}" --mlflow_run_name "Metadata"
+        """
+    )
 
     model_pipeline = BashOperator(
         task_id="model_pipeline",
         bash_command=f"""
         echo "Starting model pipeline with data from {OUTPUT}"
-        python /opt/airflow/lib/main.py --data_path "{OUTPUT}"
+        python /opt/airflow/lib/train_model.py --data_path "{OUTPUT}"
         """,
     )
 
     end = EmptyOperator(task_id="end")
 
-dependencies >> fetch_mobile_reviews >> model_pipeline >> end
+dependencies >> fetch_mobile_reviews >> [eda, model_pipeline] >> end

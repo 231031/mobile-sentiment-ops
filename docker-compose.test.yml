@@ -282,14 +282,14 @@ services:
         echo
         echo "Creating missing opt dirs if missing:"
         echo
-        mkdir -v -p /opt/airflow/{logs,dags,plugins,config}
+        mkdir -v -p /opt/airflow/{logs,config}
         echo
         echo "Airflow version:"
         /entrypoint airflow version
         echo
         echo "Files in shared volumes:"
         echo
-        ls -la /opt/airflow/{logs,dags,plugins,config}
+        ls -la /opt/airflow/{logs,config}
         echo
         echo "Running airflow config list to create default config file if missing."
         echo
@@ -353,7 +353,6 @@ services:
 
   # --- 3. MLflow Server ---
   mlflow:
-    container_name: mlflow-server
     image: ghcr.io/mlflow/mlflow:v3.5.1
     ports:
       - "8000:8000"
