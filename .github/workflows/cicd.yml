@@ -3,7 +3,7 @@ name: Deploy MLOps Stack
 on:
   push:
     branches:
-      - xxx # Your main branch
+      - main # Your main branch
 
 jobs:
   build:
@@ -43,6 +43,12 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           TAG="$SHORT_SHA-$TIMESTAMP"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create .env file in frontend
+        working-directory: ./frontend
+        run: |
+          # This creates the .env file from scratch with all required values
+          echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' > .env
 
       # --- NEW: Build both services ---
       - name: Build backend and frontend images
@@ -111,7 +117,7 @@ jobs:
           echo 'REPORTS_DIR=${{ vars.REPORTS_DIR }}' >> .env
           echo 'INITIAL_DATA_PATH=${{ vars.INITIAL_DATA_PATH }}' >> .env
           echo 'DOCKER_TAG=${{ needs.build.outputs.docker_tag }}' >> .env
-          echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' >> .env
+          echo 'BACKEND_URL=${{ vars.BACKEND_URL }}' >> .env
           # echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' >> .env
           # echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env
           # echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env
