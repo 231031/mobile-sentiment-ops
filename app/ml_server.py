@@ -17,17 +17,6 @@ predictHandler = PredictionHandler()
 dataHandler = DataHandler()
 background_tasks: BackgroundTasks
 
-def _retrain_background_job():
-    try:
-        summary = mlops.train_model()
-        if summary.get("promoted"):
-            refreshed = predictHandler.refresh_production_model()
-            print(f"Retraining finished and Production updated: {refreshed}")
-        else:
-            print(f"Retraining finished without promotion: {summary.get('promotion_context')}")
-    except Exception as exc:
-        print(f"Retraining failed: {exc}")
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # STARTUP
@@ -42,18 +31,12 @@ async def lifespan(app: FastAPI):
         if not prod_uri:
             raise ValueError("No Production model found")
         predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
-        print("✅ System Startup: Existing Production model loaded.")
+        print("System Startup: Existing Production model loaded.")
     except Exception:
-        print("❌ System Not Startup: Cannot find any Production Model")
-        mlops.train_startup_model()
-        prod_uri = predictHandler.find_any_production_model()
-        if prod_uri:
-            predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
-            print("the Production model is loaded")
-        else:
-            print("Critical: Failed to load Production model even after startup training.")
+        print("System : Cannot find any Production Model")
     
-    yield # App runs here
+    yield
+
     print("🛑 LIFESPAN: Shutting down...")
 
 app = FastAPI(lifespan=lifespan)
@@ -176,7 +159,6 @@ async def predict(file: UploadFile = File(...)):
             if drift_share > 0.5:
                 print(f"data drift is more than threshold - wait for data is labeled : {drift_share}")
                 drift_detected = True
-                background_tasks.add_task(_retrain_background_job)
             else:
                 print(f"data drift is not more than threshold - use the same model : {drift_share}")
 
@@ -198,7 +180,14 @@ async def predict(file: UploadFile = File(...)):
         },
     )
 
-@app.post("/retrain")
-async def trigger_retrain(background_tasks: BackgroundTasks):
-    background_tasks.add_task(_retrain_background_job)
+@app.get("/retrain")
+async def trigger_retrain():
+    prod_uri = predictHandler.find_any_production_model()
+    try:
+        if not prod_uri:
+            raise ValueError("No Production model found")
+        predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
+        print("System Startup: Existing Production model loaded.")
+    except Exception:
+        print("System : Cannot find any Production Model")
     return {"status": "Retraining scheduled"}

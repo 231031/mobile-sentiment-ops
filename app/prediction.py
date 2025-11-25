@@ -13,7 +13,7 @@ def map_model_type(model_type):
     elif model_type == "RandomForest":
         return "rf"
     else:
-        return "lr"
+        return "nb"
 
 class PredictionHandler:
     def __init__(self):
@@ -48,7 +48,7 @@ class PredictionHandler:
                 try: 
                     model_type = run.data.tags.get("mlflow.runName")
                     model_key = map_model_type(model_type)
-                    le_artifact = f"{model_key}__label_encoder.json"
+                    le_artifact = f"model/{model_key}__label_encoder.json"
                      
                     # download the label encoder artifact from the run
                     local_path = client.download_artifacts(mv.run_id, le_artifact, "/backend/temp")

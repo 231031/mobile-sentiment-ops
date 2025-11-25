@@ -8,7 +8,7 @@ scikit-learn
 xgboost==2.1.1
 mlflow==3.5.1
 python-multipart
-evidently==0.7.16
+evidently==0.4.33
 google-cloud-storage==2.17.0
 requests==2.32.3
 wordcloud==1.9.3
