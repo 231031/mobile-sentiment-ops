@@ -3,7 +3,7 @@ name: Deploy MLOps Stack
 on:
   push:
     branches:
-      - main # Your main branch
+      - xxx # Your main branch
 
 jobs:
   build:
@@ -98,6 +98,7 @@ jobs:
           echo 'GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}' >> .env
           echo 'AIRFLOW__WEBSERVER__BASE_URL=${{ vars.AIRFLOW__WEBSERVER__BASE_URL }}' >> .env
           echo 'AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=${{ vars.AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX }}' >> .env
+          echo 'AIRFLOW_UID=${{ vars.AIRFLOW_UID }}' >> .env
           echo 'MLFLOW_TRACKING_URI=${{ vars.MLFLOW_TRACKING_URI }}' >> .env
           echo 'REPORTS_DIR=${{ vars.REPORTS_DIR }}' >> .env
           echo 'INITIAL_DATA_PATH=${{ vars.INITIAL_DATA_PATH }}' >> .env
