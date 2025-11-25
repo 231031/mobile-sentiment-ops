@@ -58,6 +58,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Ensure report directory exists
+os.makedirs("report", exist_ok=True)
+
+# Mount the report directory to serve static files
+app.mount("/reports", StaticFiles(directory="report"), name="reports")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
