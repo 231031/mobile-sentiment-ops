@@ -51,32 +51,24 @@ jobs:
           echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' > .env
 
       # --- NEW: Build both services ---
-      - name: Build backend and frontend images
-        id: build-images
+      - name: Build tags push backend images
+        id: build-images-backend
         run: |
-          # This command builds 'backend' and 'frontend' services
-          # It creates local images named 'mlops_backend:latest' and 'mlops_frontend:latest'
+          # This command builds 'backend'
           docker compose -p mlops -f ./docker-compose.test.yml build backend frontend
-
-      # --- NEW: Tag both services ---
-      - name: Tag images
-        run: |
-          # Tag Backend
           docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
           docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
-
-          # Tag Frontend
-          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
-          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
-
-      # --- NEW: Push all 4 tags ---
-      - name: Push images to GitHub Container Registry
-        run: |
-          # Push Backend
           docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
           docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
 
-          # Push Frontend
+
+      - name: Build tags push frontend images
+        id: build-images-frontend
+        run: |
+          # This command builds 'backend'
+          docker compose -p mlops -f ./docker-compose.test.yml build frontend
+          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
+          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
           docker push ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
           docker push ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
 

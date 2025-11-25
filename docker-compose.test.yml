@@ -400,6 +400,7 @@ services:
   # --- 6. Frontend ---
   frontend:
     container_name: mlops-frontend
+    image: mlops_frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
