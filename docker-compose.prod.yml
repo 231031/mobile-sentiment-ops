@@ -375,6 +375,7 @@ services:
 volumes:
   mlflow_mlrun:
   mlflow_mlartifacts:
+  postgres-db-volume:
   # label_studio_data:
 
 networks:
