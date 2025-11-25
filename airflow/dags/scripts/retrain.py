@@ -1,6 +1,7 @@
 import argparse
 import os
 import json
+import requests
 
 import mlflow
 from mlflow.tracking import MlflowClient
@@ -16,6 +17,7 @@ def parse_args():
     p.add_argument("--experiment_name", default="Sentiment CLS")
     p.add_argument("--registered_model_name", default="sentiment")
     p.add_argument("--tracking_uri", default=os.getenv("MLFLOW_TRACKING_URI"))
+    p.add_argument("--backend_url", default=os.getenv("BACKEND_URL"))
     p.add_argument("--test_size", type=float, default=0.7)
     p.add_argument("--random_state", type=int, default=42)
     p.add_argument("--max_features", type=int, default=100)
@@ -112,7 +114,7 @@ def main():
                     client.set_registered_model_alias(prod_name, "Staging", prod_mv.version)
                 except Exception:
                     pass
-
+                
                 # find version for our best run
                 versions = client.search_model_versions(f"run_id='{best_new_run_id}'")
                 if versions:
@@ -121,8 +123,18 @@ def main():
                     summary["promoted"] = True
                     summary["promotion_context"] = f"Promoted {new_v.name} v{new_v.version} over {prod_name} v{prod_mv.version}"
                     print(summary["promotion_context"])
+
+
+                    try:
+                        response = requests.get(args.backend_url, timeout=3)
+                        print(f"Retrain triggered. Status Code: {response.status_code}")
+                    except requests.exceptions.RequestException as req_err:
+                        print(f"Failed to trigger retrain: {req_err}")
+
                 else:
                     summary["promotion_context"] = "Could not find registered version for best run; not promoted"
+                
+
             else:
                 summary["promotion_context"] = "Not promoted (either not requested or no improvement)"
         else:
