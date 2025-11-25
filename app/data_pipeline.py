@@ -1,8 +1,12 @@
 import pandas as pd
-import mlflow
 from typing import Any, Dict
 from pathlib import Path
 from datetime import datetime
+
+from google.cloud import storage
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.oauth2 import service_account
 
 from app.config import *
 from app.eda.overview import overview_eda, sentiment_bar_chart
@@ -12,11 +16,20 @@ from app.eda.duplicates import duplicate_review_eda, duplicate_review_charts
 from app.eda.rating import rating_vs_sentiment_eda, rating_vs_sentiment_charts
 from app.eda.sentiment_brand import sentiment_brand_eda, sentiment_brand_charts
 
-storage_client = storage.Client(
-    project="test-project", 
-    credentials=AnonymousCredentials(),
-    client_options=ClientOptions(api_endpoint=GCS_ENDPOINT)
-)
+def make_storage_client():
+    # If endpoint is set -> assume emulator
+    if GCS_ENDPOINT:
+        return storage.Client(
+            project="test-project",
+            credentials=AnonymousCredentials(),
+            client_options=ClientOptions(api_endpoint=GCS_ENDPOINT),
+        )
+
+    credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS)
+    return storage.Client(project=GCP_PROJECT_ID, credentials=credentials)
+
+
+storage_client = make_storage_client()
 
 class DataHandler:
     def __init__(self):
