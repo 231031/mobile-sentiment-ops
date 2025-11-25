@@ -58,6 +58,7 @@ x-airflow-common:
     # - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     # - ${AIRFLOW_PROJ_DIR:-.}/downloads:/opt/airflow/downloads
     # - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/scripts:/opt/airflow/scripts
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/lib:/opt/airflow/lib
     - ${AIRFLOW_PROJ_DIR:-.}/airflow:/opt/airflow
   user: "${AIRFLOW_UID:-50000}:0"

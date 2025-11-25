@@ -3,7 +3,7 @@ name: Deploy MLOps Stack
 on:
   push:
     branches:
-      - main # Your main branch
+      - xxx # Your main branch
 
 jobs:
   build:

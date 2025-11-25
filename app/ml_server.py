@@ -7,12 +7,10 @@ from typing import List, Dict
 import mlflow
 from contextlib import asynccontextmanager
 
-from .prediction import PredictionHandler
-from .train_model import MLOpsHandler
-from .data_pipeline import DataHandler
-from .config import *
+from app.prediction import PredictionHandler
+from app.data_pipeline import DataHandler
+from app.config import *
 
-mlops = MLOpsHandler()
 predictHandler = PredictionHandler()
 dataHandler = DataHandler()
 background_tasks: BackgroundTasks

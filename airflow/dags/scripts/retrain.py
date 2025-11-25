@@ -122,11 +122,12 @@ def main():
                     client.set_registered_model_alias(new_v.name, args.alias, new_v.version)
                     summary["promoted"] = True
                     summary["promotion_context"] = f"Promoted {new_v.name} v{new_v.version} over {prod_name} v{prod_mv.version}"
+                    print("Production model promote")
                     print(summary["promotion_context"])
 
-
                     try:
-                        response = requests.get(args.backend_url, timeout=3)
+                        retrian_url = f"{args.backend_url}/retrain"
+                        response = requests.get(retrian_url, timeout=3)
                         print(f"Retrain triggered. Status Code: {response.status_code}")
                     except requests.exceptions.RequestException as req_err:
                         print(f"Failed to trigger retrain: {req_err}")

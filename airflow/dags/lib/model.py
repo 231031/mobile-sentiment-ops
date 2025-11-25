@@ -2,6 +2,8 @@ import pandas as pd
 import json
 import tempfile
 from pathlib import Path
+import os
+import requests
 
 import mlflow
 from mlflow.tracking import MlflowClient
@@ -194,6 +196,14 @@ def promote_best_model(experiment_name: str = "Sentiment CLS", alias: str = "Pro
         
         # Promote best model to alias
         client.set_registered_model_alias(model_name, alias, version_number)
+
+
+        retrian_url = f"{os.getenv("BACKEND_URL")}/retrain"
+        try:
+            response = requests.get(retrian_url, timeout=3)
+            print(f"Retrain triggered. Status Code: {response.status_code}")
+        except requests.exceptions.RequestException as req_err:
+            print(f"Failed to trigger retrain: {req_err}")
         
         return {
             "promoted": True,
