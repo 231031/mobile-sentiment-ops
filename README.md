@@ -61,3 +61,6 @@ It loads the Production model from MLflow, serves prediction requests, checks dr
 This folder contains the **daily schedule task**.  
 
 ---
+
+## DAGS
+<img width="1246" height="838" alt="mobile_sentiment-graph" src="https://github.com/user-attachments/assets/c698a849-8b97-4a89-96cb-aa8c445e1715" />
