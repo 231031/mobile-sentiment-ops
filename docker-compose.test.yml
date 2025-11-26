@@ -69,7 +69,7 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
-    PYTHONPATH: "/opt/airflow:/opt/airflow"
+    PYTHONPATH: "/opt/airflow/dags:/opt/airflow/dags"
     # PYTHONPATH: "/opt/airflow:/opt/airflow/lib"
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
@@ -88,8 +88,8 @@ x-airflow-common:
     # - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     # - ${AIRFLOW_PROJ_DIR:-.}/downloads:/opt/airflow/downloads
     # - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
-    - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/scripts:/opt/airflow/scripts
-    - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/lib:/opt/airflow/lib
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/scripts:/opt/airflow/dags/scripts
+    - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/lib:/opt/airflow/dags/lib
     - ${AIRFLOW_PROJ_DIR:-.}/airflow:/opt/airflow
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:

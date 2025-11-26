@@ -1,5 +1,7 @@
 import argparse
+import glob
 import os
+import re
 
 import mlflow
 import pandas as pd
@@ -19,11 +21,11 @@ from lib.artifacts import evaluate_model
 # -----------------------
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--data_path", required=True, default="data/mobile.reviews.csv", help="CSV path with columns: review_text, sentiment")
+    p.add_argument("--data_path", required=True, default="/opt/airflow/data/", help="CSV path with columns: review_text, sentiment")
     p.add_argument("--experiment_name", default="Sentiment CLS")
     p.add_argument("--registered_model_name", default="sentiment")
     p.add_argument("--tracking_uri", default=os.getenv("MLFLOW_TRACKING_URI"))
-    p.add_argument("--test_size", type=float, default=0.7)
+    p.add_argument("--test_size", type=float, default=0.5)
     p.add_argument("--random_state", type=int, default=42)
     p.add_argument("--max_features", type=int, default=100)
     return p.parse_args()
@@ -31,27 +33,32 @@ def parse_args():
 # -----------------------
 # Dataset
 # -----------------------
+eng_stopwords = set(stopwords.words("english"))
 def clean_text(text):
     text = text.lower()
-    eng_stopwords = set(stopwords.words("english"))
+    text = re.sub(r'[^\w\s]', '', text)
     tokens = [word for word in text.split() if word.isalpha() and word not in eng_stopwords]
     return " ".join(tokens)
 
-def prepare_dataset(args):
-    df = pd.read_csv(args.data_path).dropna(subset=["review_text", "sentiment"])
-    df = df.drop_duplicates(subset=["review_text"]).reset_index(drop=True)
-    df['review_text'] = df['review_text'].apply(clean_text)
+def prepare_dataset(data_path):
+    csv_files = glob.glob(os.path.join(data_path, "*.csv"))
+    
+    df = None
+    for file in csv_files:
+        temp_df = pd.read_csv(file, encoding="latin1").dropna()
+        if 'text' in temp_df.columns:
+            temp_df = temp_df.rename(columns={"text": "review_text"})
+            
+        temp_df = temp_df[['review_text', 'sentiment']]
+        temp_df['sentiment'] = temp_df['sentiment'].apply(lambda x: x.lower())
+        temp_df['review_text'] = temp_df['review_text'].apply(clean_text)
+        df = pd.concat([df, temp_df], axis=0).reset_index(drop=True) if df is not None else temp_df
     
     # Encode labels
     le = LabelEncoder()
     df["sentiment"] = le.fit_transform(df["sentiment"])
     class_names = le.classes_.tolist()
-    
-    # split dataset
-    train_df, val_df = train_test_split(
-        df, test_size=args.test_size, stratify=df["sentiment"], random_state=args.random_state
-    )
-    return train_df, val_df, class_names
+    return df, class_names
 
 
 # -----------------------
@@ -90,7 +97,11 @@ def main():
     mlflow.set_experiment(args.experiment_name)
 
     # pipeline setup
-    train_df, val_df, class_names = prepare_dataset(args)
+    df, class_names = prepare_dataset(args.data_path)
+    # split dataset
+    train_df, val_df = train_test_split(
+            df, test_size=args.test_size, stratify=df["sentiment"], random_state=args.random_state
+        )
     pipelines = build_pipelines(args.max_features)
 
     # train and eval each model

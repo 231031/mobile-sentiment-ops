@@ -5,9 +5,8 @@ import mlflow
 import tempfile
 import os
 
-from evidently.report import Report
-from evidently.metric_preset import DataDriftPreset, TargetDriftPreset
-from evidently.pipeline.column_mapping import ColumnMapping
+from evidently import Dataset, DataDefinition, Report
+from evidently.presets import DataDriftPreset
 
 from sklearn.base import clone
 from sklearn.preprocessing import StandardScaler
@@ -87,17 +86,18 @@ def evidently_report(pipe, X_train, y_train, X_val, y_val):
         "prediction": pd.Series(y_pred).tolist(),
     })
     curr_df = pd.concat([curr_df.reset_index(drop=True), X_val_tfidf.reset_index(drop=True)], axis=1)
+    
+    definition = DataDefinition(text_columns=["review_text"])
+    ref_data = Dataset.from_pandas(ref_df,data_definition=definition)
+    cur_data = Dataset.from_pandas(curr_df,data_definition=definition)
 
-    column_mapping = ColumnMapping(target="target", prediction="prediction", 
-                                   text_features=["review_text"], 
-                                   numerical_features=X_train_tfidf.columns.tolist())
-    report = Report(metrics=[DataDriftPreset(), TargetDriftPreset()])
-    report.run(reference_data=ref_df, current_data=curr_df, column_mapping=column_mapping)
+    report = Report(metrics=[DataDriftPreset()])
+    drift_eval = report.run(reference_data=ref_data, current_data=cur_data,)
         
     HTML_PATH = "data_drift_report.html"
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = os.path.join(tmpdirname, HTML_PATH)
-        report.save_html(tmp_path)
+        drift_eval.save_html(tmp_path)
         mlflow.log_artifact(tmp_path, artifact_path=f"reports")
 
 # ==============

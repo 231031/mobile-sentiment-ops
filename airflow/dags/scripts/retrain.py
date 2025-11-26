@@ -5,6 +5,7 @@ import requests
 
 import mlflow
 from mlflow.tracking import MlflowClient
+from sklearn.model_selection import train_test_split
 
 from train_model import prepare_dataset
 import lib.model as model_module
@@ -15,10 +16,10 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--data_path", required=False, default="/opt/airflow/data/mobile-reviews.csv")
     p.add_argument("--experiment_name", default="Sentiment CLS")
-    p.add_argument("--registered_model_name", default="sentiment")
+    p.add_argument("--registered_model_name", default="sentiment-retrain")
     p.add_argument("--tracking_uri", default=os.getenv("MLFLOW_TRACKING_URI"))
     p.add_argument("--backend_url", default=os.getenv("BACKEND_URL"))
-    p.add_argument("--test_size", type=float, default=0.7)
+    p.add_argument("--test_size", type=float, default=0.5)
     p.add_argument("--random_state", type=int, default=42)
     p.add_argument("--max_features", type=int, default=100)
     p.add_argument("--promote", action="store_true", help="Promote best new model to production alias if better")
@@ -49,7 +50,9 @@ def main():
     client = MlflowClient()
 
     # Prepare dataset using helper from train_model.py
-    train_df, val_df, class_names = prepare_dataset(args)
+    df, class_names = prepare_dataset(args.data_path)
+    train_df, val_df = train_test_split(df, test_size=args.test_size, random_state=args.random_state, 
+                                        stratify=df['sentiment'])
 
     pipelines = model_module.build_pipelines(args.max_features)
     order = [k for k in pipelines.keys()]
@@ -62,7 +65,6 @@ def main():
     for key in order:
         model_names = {"nb": "NaiveBayes", "rf": "RandomForest", "xgb": "XGBoost"}
         run_name = model_names.get(key, key)
-        registered_name = f"{args.registered_model_name}-{key}"
 
         with mlflow.start_run(run_name=run_name):
             metrics = evaluate_model(pipelines[key], model_names.get(key, key),
@@ -75,7 +77,7 @@ def main():
                 model_key=key,
                 pipe=pipelines[key],
                 run_name=run_name,
-                registered_name=registered_name,
+                registered_name=args.registered_model_name,
                 class_names=class_names,
                 metrics=metrics,
                 args=args,

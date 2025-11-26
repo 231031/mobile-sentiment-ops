@@ -10,6 +10,8 @@ from wordcloud import WordCloud
 import argparse
 import mlflow
 
+from train_model import prepare_dataset
+
 
 def _clean_text(text: str) -> str:
     """Lower and do minimal cleaning for the wordcloud.
@@ -31,18 +33,6 @@ def _clean_text(text: str) -> str:
         return ""
     text = text.replace("\n", " ").replace("\r", " ").lower()
     return " ".join(text.split())
-
-
-def plot_sentiment_per_brand(df: pd.DataFrame, brand_col: str, sentiment_col: str):
-    """Return a matplotlib Figure: stacked bar of sentiment counts per brand."""
-    cross = pd.crosstab(df[brand_col], df[sentiment_col], margins=False)
-    fig, ax = plt.subplots(figsize=(8, max(4, 0.5 * len(cross))))
-    cross.plot(kind="bar", stacked=True, ax=ax)
-    ax.set_title("Sentiment counts per brand")
-    ax.set_ylabel("Count")
-    ax.legend(title=sentiment_col)
-    plt.tight_layout()
-    return fig, cross
 
 
 def plot_class_distribution(df: pd.DataFrame, sentiment_col: str):
@@ -120,18 +110,11 @@ def eda(
     dup_examples = df.loc[dup_mask, text_col].value_counts().head(5).to_dict()
     results["duplicates"] = {"total_rows": total, "duplicate_rows": dup_count, "examples": dup_examples}
 
-    # 2) sentiment per brand
-    fig_brand, cross = plot_sentiment_per_brand(df, brand_col, sentiment_col)
-    results["sentiment_per_brand"] = {
-        "counts": _make_serializable(cross),
-        "percent": _make_serializable(cross.div(cross.sum(axis=1), axis=0).fillna(0)),
-    }
-
-    # 3) class distribution
+    # 2) class distribution
     fig_class, class_counts = plot_class_distribution(df, sentiment_col)
     results["class_distribution"] = _make_serializable(class_counts)
 
-    # 4) wordcloud
+    # 3) wordcloud
     fig_wc, wc_obj = plot_wordcloud(df, text_col, max_words=max_words)
     results["wordcloud"] = None if fig_wc is None else "wordcloud_generated"
 
@@ -149,9 +132,6 @@ def eda(
 
         try:
             # log figures if created
-            if fig_brand is not None:
-                mlflow.log_figure(fig_brand, "eda/sentiment_per_brand.png")
-                plt.close(fig_brand)
             if fig_class is not None:
                 mlflow.log_figure(fig_class, "eda/sentiment_class_distribution.png")
                 plt.close(fig_class)
@@ -174,14 +154,17 @@ def eda(
 
 def _cli():
     p = argparse.ArgumentParser(description="Run EDA and log artifacts to MLflow.")
-    p.add_argument("--data_path", required=True, help="Path to CSV file with review_text and sentiment columns")
+    p.add_argument("--data_path", required=True, help="CSV directory")
     p.add_argument("--mlflow_run_name", default="EDA", required=False, help="Optional MLflow run name for EDA")
     p.add_argument("--experiment_name", default="Sentiment CLS", help="MLflow experiment name")
     args = p.parse_args()
 
     mlflow.set_experiment(args.experiment_name)
-    df = pd.read_csv(args.data_path).dropna(subset=["review_text", "sentiment"])
-    df = df.drop_duplicates(subset=["review_text"]).reset_index(drop=True)
+    df, class_names = prepare_dataset(args.data_path)
+    class_map = {i: c for i, c in enumerate(class_names)}
+    df['sentiment'] = df['sentiment'].map(class_map)
+    
+    df = df.drop_duplicates(subset=["review_text"]).dropna().reset_index(drop=True)
     res = eda(df, log_to_mlflow=True, mlflow_run_name=args.mlflow_run_name)
     print("EDA finished. MLflow run info:", res.get("mlflow"))
 
