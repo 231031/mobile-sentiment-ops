@@ -84,6 +84,7 @@ export default function CsvUploadCard() {
                 <div>
                   <p className="text-gray-500">Drag & drop your CSV file here</p>
                   <p className="text-gray-400 text-sm">or click to browse</p>
+                  <p className="text-red-400 text-sm">CSV file should contain a column named "review_text"</p>
                 </div>
               )}
 

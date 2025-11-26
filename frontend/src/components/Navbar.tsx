@@ -12,9 +12,9 @@ export default function Navbar() {
           <img src={logo} className="size-8"/>
           <p onClick={() => navigate("/")} className="text-xl text-gray-800 cursor-pointer ">Mobile Sentiment</p>
         </div>
-        <div className="col-start-10  flex justify-center items-center space-x-4 text-gray-600 cursor-pointer " onClick={() => navigate("/dashboard")}>
+        {/* <div className="col-start-10  flex justify-center items-center space-x-4 text-gray-600 cursor-pointer " onClick={() => navigate("/dashboard")}>
           <p> Dashboard</p>
-        </div>
+        </div> */}
         
       </div>
       
