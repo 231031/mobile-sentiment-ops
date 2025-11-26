@@ -3,7 +3,7 @@ name: Deploy MLOps Stack
 on:
   push:
     branches:
-      - xxx # Your main branch
+      - main # Your main branch
 
 jobs:
   build:
@@ -110,15 +110,8 @@ jobs:
           echo 'INITIAL_DATA_PATH=${{ vars.INITIAL_DATA_PATH }}' >> .env
           echo 'DOCKER_TAG=${{ needs.build.outputs.docker_tag }}' >> .env
           echo 'BACKEND_URL=${{ vars.BACKEND_URL }}' >> .env
-          # echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' >> .env
-          # echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env
-          # echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env
-          # echo 'POSTGRE_NAME=${{ secrets.POSTGRE_NAME }}' >> .env
-          # echo 'POSTGRE_HOST=${{ secrets.POSTGRE_HOST }}' >> .env
-          # echo 'LABEL_STUDIO_USERNAME=${{ secrets.LABEL_STUDIO_USERNAME }}' >> .env
-          # echo 'LABEL_STUDIO_PASSWORD=${{ secrets.LABEL_STUDIO_PASSWORD }}' >> .env
-          # echo 'LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK=${{ secrets.LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK }}' >> .env
-      
+          echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' > .env
+
       - name: Create credential.json file
         working-directory: ./app
         run: |
@@ -156,3 +149,29 @@ jobs:
             docker compose -p mlops -f docker-compose.prod.yml ps
             exit 1
           fi
+
+  healthcheck:
+    name: Backend healthcheck
+    needs: deploy
+    runs-on: self-hosted
+    steps: 
+      - name: Test Backend Health Endpoint
+        env:
+          TARGET_IP: ${{ vars.VM_IP }} 
+        run: |
+          echo "Waiting for Backend to respond at http://$TARGET_IP/backend/healthcheck ..."
+          for i in {1..12}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" http://$TARGET_IP/backend/healthcheck)
+            
+            if [ "$response" == "200" ]; then
+              echo "Healthcheck passed! Status code: $response"
+              exit 0
+            else
+              echo "Attempt $i: Received status $response. Retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
+
+          echo "Healthcheck failed after 60 seconds."
+          curl -v http://$TARGET_IP/backend/healthcheck
+          exit 1

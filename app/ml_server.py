@@ -178,14 +178,18 @@ async def predict(file: UploadFile = File(...)):
         },
     )
 
-@app.get("/retrain")
+@app.get("/loadmodel")
 async def trigger_retrain():
     prod_uri = predictHandler.find_any_production_model()
     try:
         if not prod_uri:
             raise ValueError("No Production model found")
         predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
-        print("System Startup: Existing Production model loaded.")
+        print("System : Load new model")
     except Exception:
         print("System : Cannot find any Production Model")
-    return {"status": "Retraining scheduled"}
+    return {"status": 200}
+
+@app.get("/healthcheck")
+async def healthcheck():
+    return {"status": 200}

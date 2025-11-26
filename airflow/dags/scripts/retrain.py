@@ -62,7 +62,7 @@ def main():
     for key in order:
         model_names = {"nb": "NaiveBayes", "rf": "RandomForest", "xgb": "XGBoost"}
         run_name = model_names.get(key, key)
-        registered_name = f"{args.registered_model_name}-{key}"
+        registered_name = f"{args.registered_model_name}"
 
         with mlflow.start_run(run_name=run_name):
             metrics = evaluate_model(pipelines[key], model_names.get(key, key),
@@ -126,7 +126,7 @@ def main():
                     print(summary["promotion_context"])
 
                     try:
-                        retrian_url = f"{args.backend_url}/retrain"
+                        retrian_url = f"{args.backend_url}/loadmodel"
                         response = requests.get(retrian_url, timeout=3)
                         print(f"Retrain triggered. Status Code: {response.status_code}")
                     except requests.exceptions.RequestException as req_err:

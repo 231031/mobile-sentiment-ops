@@ -40,7 +40,6 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/airflow/execution/'
     PYTHONPATH: "/opt/airflow:/opt/airflow"
-    # PYTHONPATH: "/opt/airflow:/opt/airflow/lib"
     # yamllint disable rule:line-length
     # Use simple http server on scheduler for health checks
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
@@ -52,12 +51,6 @@ x-airflow-common:
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
-    # - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-    # - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-    # - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-    # - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-    # - ${AIRFLOW_PROJ_DIR:-.}/downloads:/opt/airflow/downloads
-    # - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/scripts:/opt/airflow/scripts
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags/lib:/opt/airflow/lib
     - ${AIRFLOW_PROJ_DIR:-.}/airflow:/opt/airflow
@@ -360,35 +353,17 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_URL=${VITE_API_URL}
+    env_file:
+      - .env
     networks:
       - mlops-nw
     depends_on:
       - backend
 
-  # labelstudio:
-  #   image: heartexlabs/label-studio:1.21.0
-  #   container_name: labelstudio-server # Correct key
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - label_studio_data:/label-studio/data
-  #   networks:
-  #     - mlops-nw
-  #   environment:
-  #     - LABEL_STUDIO_HOST=${LABEL_STUDIO_HOST}
-  #     - LABEL_STUDIO_DB=${LABEL_STUDIO_DB}
-  #     - POSTGRES_NAME=${POSTGRES_NAME}
-  #     - POSTGRES_USER=${POSTGRES_USER}
-  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-  #     - POSTGRES_HOST=${POSTGRES_HOST}
-  #     - POSTGRES_PORT=${POSTGRES_PORT}
-
-
 volumes:
   mlflow_mlrun:
   mlflow_mlartifacts:
   postgres-db-volume:
-  # label_studio_data:
 
 networks:
   mlops-nw:
