@@ -71,7 +71,7 @@ export default function AnalysisResultPage() {
     const endIndex = Math.min(currentPage * rowsPerPage, data.length);
 
     return (
-        <div className="p-8 h-screen bg-gray-100 overflow-auto grid grid-cols-12 gap-4">
+        <div className="p-8 bg-gray-100 overflow-auto grid grid-cols-12 gap-4">
             <div className="col-start-3 col-end-11 bg-white rounded-xl p-8">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center space-x-4">
