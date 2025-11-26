@@ -23,7 +23,7 @@ def parse_args():
     p.add_argument("--experiment_name", default="Sentiment CLS")
     p.add_argument("--registered_model_name", default="sentiment")
     p.add_argument("--tracking_uri", default=os.getenv("MLFLOW_TRACKING_URI"))
-    p.add_argument("--test_size", type=float, default=0.7)
+    p.add_argument("--test_size", type=float, default=0.2)
     p.add_argument("--random_state", type=int, default=42)
     p.add_argument("--max_features", type=int, default=100)
     return p.parse_args()
