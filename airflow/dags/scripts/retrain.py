@@ -47,7 +47,7 @@ def check_drift(client: MlflowClient, prod_mv):
             drift_report_path = client.download_artifacts(prod_mv.run_id, drift_report.path)
             with open(drift_report_path, "r") as f:
                 report_data = json.load(f)
-                drift_share = report_data.get("metrics", {}).get("data_drift", {}).get("drift_share", 0)
+                drift_share = report_data.get("metrics", {}).get("result", {}).get("drift_share", 0)
                 print(f"Drift share: {drift_share}")
                 return drift_share
         else:
