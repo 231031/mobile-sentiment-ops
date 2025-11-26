@@ -67,7 +67,7 @@ with DAG(
     )
     
     retrain = BashOperator(
-        task_id="retraining",
+        task_id="retrain",
         bash_command=f"""
         echo "Running retraining pipeline..."
         python /opt/airflow/scripts/retrain.py --data_path "{OUTPUT}" --promote

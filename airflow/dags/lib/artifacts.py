@@ -95,10 +95,15 @@ def evidently_report(pipe, X_train, y_train, X_val, y_val):
     report.run(reference_data=ref_df, current_data=curr_df, column_mapping=column_mapping)
         
     HTML_PATH = "data_drift_report.html"
+    JSON_PATH = "data_drift_report.json"
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_path = os.path.join(tmpdirname, HTML_PATH)
         report.save_html(tmp_path)
-        mlflow.log_artifact(tmp_path, artifact_path=f"reports")
+        mlflow.log_artifact(tmp_path, artifact_path="reports")
+        
+        tmp_path = os.path.join(tmpdirname, JSON_PATH)
+        report.save_json(tmp_path)
+        mlflow.log_artifact(tmp_path, artifact_path="reports")
 
 # ==============
 # Utility

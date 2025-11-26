@@ -18,7 +18,7 @@ def parse_args():
     p.add_argument("--registered_model_name", default="sentiment")
     p.add_argument("--tracking_uri", default=os.getenv("MLFLOW_TRACKING_URI"))
     p.add_argument("--backend_url", default=os.getenv("BACKEND_URL"))
-    p.add_argument("--test_size", type=float, default=0.7)
+    p.add_argument("--test_size", type=float, default=0.2)
     p.add_argument("--random_state", type=int, default=42)
     p.add_argument("--max_features", type=int, default=100)
     p.add_argument("--promote", action="store_true", help="Promote best new model to production alias if better")
@@ -38,6 +38,25 @@ def find_any_production_model(client: MlflowClient, alias: str):
     return None, None
 
 
+def check_drift(client: MlflowClient, prod_mv):
+    """Check drift share from Evidently report in MLflow artifacts."""
+    try:
+        artifacts = client.list_artifacts(prod_mv.run_id, path="reports")
+        drift_report = next((a for a in artifacts if a.path.endswith("data_drift_report.json")), None)
+        if drift_report:
+            drift_report_path = client.download_artifacts(prod_mv.run_id, drift_report.path)
+            with open(drift_report_path, "r") as f:
+                report_data = json.load(f)
+                drift_share = report_data.get("metrics", {}).get("result", {}).get("drift_share", 0)
+                print(f"Drift share: {drift_share}")
+                return drift_share
+        else:
+            print("No Evidently drift report found in artifacts.")
+    except Exception as e:
+        print(f"Error checking drift: {e}")
+    return 0
+
+
 def main():
     args = parse_args()
     if args.tracking_uri:
@@ -47,6 +66,21 @@ def main():
 
     mlflow.set_experiment(args.experiment_name)
     client = MlflowClient()
+
+    # Check drift before proceeding
+    try:
+        prod_name, prod_mv = find_any_production_model(client, args.alias)
+        if prod_mv:
+            drift_share = check_drift(client, prod_mv)
+            if drift_share <= 0.3:
+                print("Drift share <= 0.3. Ending pipeline.")
+                return
+            else:
+                print("Drift share > 0.3. Proceeding with pipeline.")
+        else:
+            print("No production model found. Proceeding with pipeline.")
+    except Exception as e:
+        print(f"Error during drift check: {e}. Proceeding with pipeline.")
 
     # Prepare dataset using helper from train_model.py
     train_df, val_df, class_names = prepare_dataset(args)

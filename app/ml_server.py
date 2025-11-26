@@ -154,7 +154,7 @@ async def predict(file: UploadFile = File(...)):
                 cur_df=df_original[[REVIEW_COLUMN]],
                 request_id=request_id
             )
-            if drift_share > 0.5:
+            if drift_share > 0.3:
                 print(f"data drift is more than threshold - wait for data is labeled : {drift_share}")
                 drift_detected = True
             else:
