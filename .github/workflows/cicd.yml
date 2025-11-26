@@ -45,7 +45,7 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Create .env file in frontend
-        working-directory: ./frontend
+        working-directory: ./
         run: |
           # This creates the .env file from scratch with all required values
           echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' > .env
