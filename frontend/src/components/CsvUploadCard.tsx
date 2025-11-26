@@ -5,7 +5,6 @@ import upload from "../assets/upload.png";
 import Button from "./ui/Button";
 import { Loader2, Send } from "lucide-react";
 
-
 export default function CsvUploadCard() {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -32,7 +31,7 @@ export default function CsvUploadCard() {
     console.log("Processing CSV:", file);
 
     try {
-      setIsAnalyzing(true)
+      setIsAnalyzing(true);
 
       const formData = new FormData();
       formData.append("file", file);
@@ -40,28 +39,25 @@ export default function CsvUploadCard() {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/predict`, {
         method: "POST",
         body: formData,
-      })
+      });
 
-      const data = await res.text()
-      
+      const data = await res.text();
+
       navigate("/csv-result", { state: { csvData: data } });
     } catch (err) {
-      console.log(err)
+      console.log(err);
     } finally {
-      setIsAnalyzing(false)
+      setIsAnalyzing(false);
     }
-
-
   };
 
   return (
-
     <>
       <div className="col-start-3 col-end-11 ">
         <div className="flex flex-col  bg-white shadow-lg rounded-xl p-8 space-y-4">
           <div className="flex items-center space-x-3 mb-4 ">
             <img src={icon} alt="CSV Icon" className="size-10" />
-            <h1 className="text-2xl text-gray-800">Batch Upload</h1>
+            <h1 className="text-2xl text-gray-800">Csv Upload</h1>
           </div>
 
           {/* Drag & Drop Zone */}
@@ -82,14 +78,20 @@ export default function CsvUploadCard() {
 
               {!file && (
                 <div>
-                  <p className="text-gray-500">Drag & drop your CSV file here</p>
+                  <p className="text-gray-500">
+                    Drag & drop your CSV file here
+                  </p>
                   <p className="text-gray-400 text-sm">or click to browse</p>
-                  <p className="text-red-400 text-sm">CSV file should contain a column named "review_text"</p>
+                  <p className="text-red-400 text-sm">
+                    CSV file should contain a column named "review_text"
+                  </p>
                 </div>
               )}
 
               {file && (
-                <p className="text-gray-700 font-medium">Click to change files</p>
+                <p className="text-gray-700 font-medium">
+                  Click to change files
+                </p>
               )}
             </div>
           </div>
@@ -110,10 +112,7 @@ export default function CsvUploadCard() {
           />
 
           {/* Button */}
-          <Button
-            onClick={processCsv}
-            disabled={!file || isAnalyzing}
-          >
+          <Button onClick={processCsv} disabled={!file || isAnalyzing}>
             {isAnalyzing ? (
               <div className="flex justify-center items-center space-x-2 ">
                 <Loader2 className="h-4 w-4 animate-spin " />
@@ -125,16 +124,10 @@ export default function CsvUploadCard() {
                 <p>Analyze csv file</p>
               </div>
             )}
-
           </Button>
-
         </div>
-
-
       </div>
       {/* Header */}
-
     </>
-
   );
 }

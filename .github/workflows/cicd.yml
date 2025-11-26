@@ -14,11 +14,9 @@ jobs:
       packages: write
 
     steps:
-      # 1. Add this step to reclaim ownership of the files
-      - name: Fix directory permissions
+      - name: Fix workspace permissions
         run: |
-          docker run --rm -v ./:/workspace -w /workspace alpine chown -R $(id -u):$(id -g) . || true
-        shell: bash
+          sudo chown -R $USER:$USER "$RUNNER_WORKSPACE"
 
       - name: clean unncessary files to save space
         run: |
@@ -56,23 +54,22 @@ jobs:
           # This creates the .env file from scratch with all required values
           echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' > .env
 
-      # --- NEW: Build both services ---
-      - name: Build tags push backend images
-        id: build-images-backend
+      # Build backend & frontend
+      - name: Build backend & frontend images
         run: |
-          # This command builds 'backend'
-          docker compose -p mlops -f ./docker-compose.test.yml build backend frontend
+          docker compose -p mlops -f docker-compose.test.yml build backend frontend
+
+      # Tag & push backend
+      - name: Push backend images
+        run: |
           docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
           docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
           docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
           docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
 
-
-      - name: Build tags push frontend images
-        id: build-images-frontend
+      # Tag & push frontend
+      - name: Push frontend images
         run: |
-          # This command builds 'frontend'
-          docker compose -p mlops -f ./docker-compose.test.yml build frontend
           docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
           docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
           docker push ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
