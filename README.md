@@ -62,5 +62,16 @@ This folder contains the **daily schedule task**.
 
 ---
 
-## DAGS
+## ⚙️ DAGS Pipeline
+
+1. python_dependencies (BashOperator): install dependencies again to ensure that all python lib/module are ready
+
+2. model_pipeline (BashOperator): train model, promote best model with 'Prouduction' alias in mlflow and log evidently report for monitoring
+
+3. eda (BashOperator): visualize the insight from dataset and save as artifacts in mlflow
+
+4. retrain (BashOperator): check retraining condition with evidently report from model_pipeline task and perform retraining if met condition (drift_share > 0.3)
+
+5. end (EmptyOperator): marking completion of the pipeline
+
 <img width="1246" height="323" alt="dags_pipeline" src="https://github.com/user-attachments/assets/ca237291-2091-42a1-aa3b-36bda26ef813" />
