@@ -106,6 +106,7 @@ jobs:
           echo 'GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' >> .env
           echo 'GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}' >> .env
           echo 'AIRFLOW__WEBSERVER__BASE_URL=${{ vars.AIRFLOW__WEBSERVER__BASE_URL }}' >> .env
+          echo 'AIRFLOW__API__BASE_URL=${{ vars.AIRFLOW__API__BASE_URL }}' >> .env
           echo 'AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=${{ vars.AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX }}' >> .env
           echo 'AIRFLOW_UID=${{ vars.AIRFLOW_UID }}' >> .env
           echo 'MLFLOW_TRACKING_URI=${{ vars.MLFLOW_TRACKING_URI }}' >> .env

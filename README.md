@@ -16,15 +16,18 @@ This project is created as part of the subject **CPE393 - MLOps**, demonstrating
 
 ## Initial Project
 
+for development in frontend service use ```dockerfile: Dockerfile.dev``
+
 - run ```docker-compose -f docker-compose.test.yml up -d``` to start mlflow, gcs-emulator
 - run ```docker-compose -f docker-compose.test.yml down``` down all services
 - run ```docker-compose -f docker-compose.test.yml down -v``` down all services and delete all backup
 
 ## Access UI
 
+- <http://localhost:5173> - frontend
 - <http://localhost:8000> - mlflow
 - <http://localhost:8080> - airflow username: airflow, password: airflow
-- <http://localhost:5001> - Fast API with /predict and /retrain
+- <http://localhost:5001> - Fast API
 
 ## Project Dir
 
@@ -38,7 +41,6 @@ It loads the Production model from MLflow, serves prediction requests, checks dr
   Responsibilities:
   - connect to storage
   - upload any related file
-  - (future) EDA / visualization helpers
 
 - `prediction.py`  
   **PredictionHandler**  
@@ -46,32 +48,16 @@ It loads the Production model from MLflow, serves prediction requests, checks dr
   - Provide model for prediction
   - run Evidently drift checks and store
 
-- `train_model.py`  
-  **MLOpsHandler / retrain handler**  
-  Responsibilities:
-  - train LR / RF / XGB pipelines experinement from lib folder
-  - provide functions like `train_startup_model()` or function for decision to retrain and retrain
-
 - `ml_server.py`  
   Main FastAPI server entrypoint.  
   Responsibilities:
   - lifespan startup: load Production model (or train if missing)
-  - `/predict` endpoint: infer + drift check + upload outputs
-  - `/retrain` endpoint: trigger retraining (usually background task)
+  - `/predict` endpoint: handle preidction for many rows of text
+  - `/predict_json` endpoint: handle prediction from text
+  - `/loadmodel` endpoint: trigger to load model from airflow
 
-### `lib/`
+### `airflow/`  *(Airflow schedule task - experinement and retrain model)*
 
-Helper scripts / utilities
-
-- `train_with_dags.py`  
-  **Traning Logic and Experinement**  
-  Traning model logic and experinement in mlflow
-
-### `db_init/`
-
-Database initialization scripts (mostly for Label Studio / Postgres).
-
-- `init.sh`  
-  Runs when the DB container starts to create schema, users, or default tables.
+This folder contains the **daily schedule task**.  
 
 ---

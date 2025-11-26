@@ -2,6 +2,8 @@ lib/mlruns
 */.env
 .env
 plugins
+airflow/config
+config
 logs
 downloads
 report
