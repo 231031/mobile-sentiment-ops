@@ -27,7 +27,7 @@ export default function Home() {
         <div className="flex flex-col w-full h-full justify-center items-start space-y-4 ">
           <img src={csvIcon} className="size-10" />
           <p className="text-2xl">CSV Upload </p>
-          <p className="text-gray-400"> CSV input forsentiment prediction</p>
+          <p className="text-gray-400"> CSV input for sentiment prediction</p>
           <Button label=" Upload CSV " to="/csv-upload" className="w-full"/>
         </div>
       </div>

@@ -15,20 +15,17 @@ export default function Footer() {
                     <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 text-gray-600 ">
                         <div className="text-center group">
                             <p className="font-bold text-orange-500 mb-0.5  p-1">Data Scientist</p>
-                            <p className="group-hover:text-gray-900 transition-colors p-1">6570501057 SIRIYAKORN KHIAOWIJIT</p>
+                            <p className="group-hover:text-gray-900 transition-colors p-1">65070501057 SIRIYAKORN KHIAOWIJIT</p>
                         </div>
                         <div className="text-center group">
                             <p className="font-bold text-orange-500 mb-0.5 p-1">ML Engineer</p>
-                            <p className="group-hover:text-gray-900 transition-colors p-1">6570501037 PAWEEKORN SORATYATHORN</p>
-                        </div>
-                        <div className="text-center group">
-                            <p className="font-bold text-orange-500 mb-0.5 p-1">Automation</p>
-                            <p className="group-hover:text-gray-900 transition-colors p-1">6570501087 SUNEENAD SANGUANIN</p>
+                            <p className="group-hover:text-gray-900 transition-colors p-1">65070501037 PAWEEKORN SORATYATHORN</p>
+                            <p className="group-hover:text-gray-900 transition-colors p-1">65070501087 SUNEENAD SANGUANIN</p>
                         </div>
                         <div className="text-center group">
                             <p className="font-bold text-orange-500 mb-0.5 p-1">ML Infrastructure</p>
-                            <p className="group-hover:text-gray-900 transition-colors p-1">6570501061 ARTHIT NOPJAROONSRI</p>
-                            <p className="group-hover:text-gray-900 transition-colors p-1">6570501066 KANLAYAPHAT PRAKOBWAITAYAKIJ</p>
+                            <p className="group-hover:text-gray-900 transition-colors p-1">65070501061 ARTHIT NOPJAROONSRI</p>
+                            <p className="group-hover:text-gray-900 transition-colors p-1">65070501066 KANLAYAPHAT PRAKOBWAITAYAKIJ</p>
                         </div>
                     </div>
 
