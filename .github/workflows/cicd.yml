@@ -65,7 +65,7 @@ jobs:
       - name: Build tags push frontend images
         id: build-images-frontend
         run: |
-          # This command builds 'backend'
+          # This command builds 'frontend'
           docker compose -p mlops -f ./docker-compose.test.yml build frontend
           docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
           docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
@@ -110,7 +110,7 @@ jobs:
           echo 'INITIAL_DATA_PATH=${{ vars.INITIAL_DATA_PATH }}' >> .env
           echo 'DOCKER_TAG=${{ needs.build.outputs.docker_tag }}' >> .env
           echo 'BACKEND_URL=${{ vars.BACKEND_URL }}' >> .env
-          echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' > .env
+          echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' >> .env
 
       - name: Create credential.json file
         working-directory: ./app
@@ -119,7 +119,7 @@ jobs:
               
       # --- UPDATED: Use docker-compose.prod.yml ---
       - name: Delete old docker container
-        run: docker compose -p mlops -f docker-compose.prod.yml down -v
+        run: docker compose -p mlops -f docker-compose.prod.yml down
 
       - name: Deploy to server
         working-directory: ./
