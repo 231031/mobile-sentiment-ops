@@ -63,4 +63,4 @@ This folder contains the **daily schedule task**.
 ---
 
 ## DAGS
-<img width="1246" height="838" alt="mobile_sentiment-graph" src="https://github.com/user-attachments/assets/c698a849-8b97-4a89-96cb-aa8c445e1715" />
+<img width="1246" height="323" alt="dags_pipeline" src="https://github.com/user-attachments/assets/ca237291-2091-42a1-aa3b-36bda26ef813" />
