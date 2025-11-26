@@ -62,7 +62,7 @@ def train_eval_log(model_key, pipe,
                    class_names, args):
     model_names = {"nb": "NaiveBayes", "rf": "RandomForest", "xgb": "XGBoost"}
     run_name = model_names[model_key]
-    registered_name = f"{args.registered_model_name}-{model_key}"
+    registered_name = f"{args.registered_model_name}"
 
     with mlflow.start_run(run_name=run_name):        
         metrics = evaluate_model(pipe, model_names[model_key], 

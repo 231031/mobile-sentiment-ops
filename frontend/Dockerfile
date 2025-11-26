@@ -1,28 +1,36 @@
-# Stage 1: Build the React application
-FROM node:18-alpine AS build
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package*.json ./
+RUN npm install
 
-# Copy source code
 COPY . .
 
-# Build the application
+RUN chmod +x node_modules/typescript/bin/tsc
+
 RUN npm run build
 
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
+# ───────────── Production stage ──────────────
+FROM node:18-alpine AS runner
 
-# Copy the build output from the previous stage
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy custom Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN apk add --no-cache gettext
 
-# Expose port 80
-EXPOSE 80
+# Install serve and tools
+RUN npm install -g serve && apk add --no-cache dos2unix
 
-CMD ["nginx", "-g", "daemon off;"]
+# Copy built assets and scripts
+COPY --from=builder /app/dist ./dist
+COPY config.template.js ./config.template.js
+COPY entrypoint.sh ./entrypoint.sh
+
+# Fix line endings and permissions
+RUN dos2unix entrypoint.sh && chmod +x entrypoint.sh
+
+# Runtime ENV config via entrypoint
+ENTRYPOINT ["./entrypoint.sh"]
+CMD ["serve", "-s", "dist", "-l", "5173"]
+
+EXPOSE 5173

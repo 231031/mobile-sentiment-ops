@@ -389,7 +389,6 @@ services:
     volumes:
       - ./data:/backend/data
       - ./report:/backend/report
-      - ./lib:/backend/lib
       - ./app:/backend/app
     depends_on:
       - mlflow
@@ -400,11 +399,15 @@ services:
   # --- 6. Frontend ---
   frontend:
     container_name: mlops-frontend
+    image: mlops_frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+      # dockerfile: Dockerfile
     ports:
       - "5173:5173"
+    env_file:
+      - ./.env
     volumes:
       - ./frontend:/app
       - /app/node_modules

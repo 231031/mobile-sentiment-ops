@@ -44,27 +44,33 @@ jobs:
           TAG="$SHORT_SHA-$TIMESTAMP"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      # --- NEW: Build both services ---
-      - name: Build backend and frontend images
-        id: build-images
+      - name: Create .env file in frontend
+        working-directory: ./frontend
         run: |
-          # This command builds 'backend' and 'frontend' services
-          # It creates local images named 'mlops_backend:latest' and 'mlops_frontend:latest'
-          docker compose -p mlops -f ./docker-compose.test.yml build backend
+          # This creates the .env file from scratch with all required values
+          echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' > .env
 
-      # --- NEW: Tag both services ---
-      - name: Tag images
+      # --- NEW: Build both services ---
+      - name: Build tags push backend images
+        id: build-images-backend
         run: |
-          # Tag Backend
+          # This command builds 'backend'
+          docker compose -p mlops -f ./docker-compose.test.yml build backend frontend
           docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
           docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
-
-      # --- NEW: Push all 4 tags ---
-      - name: Push images to GitHub Container Registry
-        run: |
-          # Push Backend
           docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
           docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
+
+
+      - name: Build tags push frontend images
+        id: build-images-frontend
+        run: |
+          # This command builds 'backend'
+          docker compose -p mlops -f ./docker-compose.test.yml build frontend
+          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
+          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
+          docker push ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
+          docker push ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
 
     outputs:
       docker_tag: ${{ steps.set_tag.outputs.tag }} 
@@ -96,10 +102,14 @@ jobs:
           echo 'GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}' > .env
           echo 'GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' >> .env
           echo 'GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}' >> .env
+          echo 'AIRFLOW__WEBSERVER__BASE_URL=${{ vars.AIRFLOW__WEBSERVER__BASE_URL }}' >> .env
+          echo 'AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=${{ vars.AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX }}' >> .env
+          echo 'AIRFLOW_UID=${{ vars.AIRFLOW_UID }}' >> .env
           echo 'MLFLOW_TRACKING_URI=${{ vars.MLFLOW_TRACKING_URI }}' >> .env
           echo 'REPORTS_DIR=${{ vars.REPORTS_DIR }}' >> .env
           echo 'INITIAL_DATA_PATH=${{ vars.INITIAL_DATA_PATH }}' >> .env
           echo 'DOCKER_TAG=${{ needs.build.outputs.docker_tag }}' >> .env
+          echo 'BACKEND_URL=${{ vars.BACKEND_URL }}' >> .env
           # echo 'POSTGRES_USER=${{ secrets.POSTGRES_USER }}' >> .env
           # echo 'POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}' >> .env
           # echo 'POSTGRES_DB=${{ secrets.POSTGRES_DB }}' >> .env
@@ -123,7 +133,7 @@ jobs:
         run: |
           # This command is now correct!
           # It pulls the new backend/frontend images using the DOCKER_TAG from the .env file
-          docker compose -p mlops -f docker-compose.prod.yml pull backend
+          docker compose -p mlops -f docker-compose.prod.yml pull backend frontend
           
           # This brings up the entire stack, including the new images
           docker compose -p mlops -f docker-compose.prod.yml up -d

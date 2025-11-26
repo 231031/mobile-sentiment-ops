@@ -1,8 +1,12 @@
 import pandas as pd
-import mlflow
 from typing import Any, Dict
 from pathlib import Path
 from datetime import datetime
+
+from google.cloud import storage
+from google.api_core.client_options import ClientOptions
+from google.auth.credentials import AnonymousCredentials
+from google.oauth2 import service_account
 
 from app.config import *
 from app.eda.overview import overview_eda, sentiment_bar_chart
@@ -10,12 +14,22 @@ from app.eda.text_length import text_length_eda, text_length_charts
 from app.eda.word_freq import word_frequency_eda, word_frequency_charts, word_cloud_charts
 from app.eda.duplicates import duplicate_review_eda, duplicate_review_charts
 from app.eda.rating import rating_vs_sentiment_eda, rating_vs_sentiment_charts
+from app.eda.sentiment_brand import sentiment_brand_eda, sentiment_brand_charts
 
-storage_client = storage.Client(
-    project="test-project", 
-    credentials=AnonymousCredentials(),
-    client_options=ClientOptions(api_endpoint=GCS_ENDPOINT)
-)
+def make_storage_client():
+    # If endpoint is set -> assume emulator
+    if GCS_ENDPOINT:
+        return storage.Client(
+            project="test-project",
+            credentials=AnonymousCredentials(),
+            client_options=ClientOptions(api_endpoint=GCS_ENDPOINT),
+        )
+
+    credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS)
+    return storage.Client(project=GCP_PROJECT_ID, credentials=credentials)
+
+
+storage_client = make_storage_client()
 
 class DataHandler:
     def __init__(self):
@@ -121,6 +135,12 @@ class DataHandler:
         rating_charts = rating_vs_sentiment_charts(df=df, rating_column="rating", label_column=label_column,
                                                    report_prefix=used_prefix)
 
+        brand_eda = sentiment_brand_eda(df=df, brand_column="brand", label_column=label_column,
+                                        report_prefix=used_prefix)
+
+        brand_charts = sentiment_brand_charts(df=df, brand_column="brand", label_column=label_column,
+                                              report_prefix=used_prefix)
+
         # Collect and upload EDA reports to storage
         def _collect_paths(obj):
             paths = []
@@ -147,6 +167,8 @@ class DataHandler:
             "duplicates_charts": duplicates_charts,
             "rating_overview": rating_eda,
             "rating_charts": rating_charts,
+            "brand_overview": brand_eda,
+            "brand_charts": brand_charts,
         })
         upload_prefix = f"reports/eda/{used_prefix}"
         for p in all_paths:
@@ -164,5 +186,7 @@ class DataHandler:
             "duplicates_charts": duplicates_charts,
             "rating_overview": rating_eda,
             "rating_charts": rating_charts,
+            "brand_overview": brand_eda,
+            "brand_charts": brand_charts,
         }
         return result

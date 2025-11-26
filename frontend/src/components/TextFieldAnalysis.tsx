@@ -23,7 +23,7 @@ export default function TextFieldAnalysis() {
         setIsAnalyzing(true);
 
         try {
-            const res = await fetch("/api/predict_json", {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/predict_json`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

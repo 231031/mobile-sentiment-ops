@@ -1,31 +1,19 @@
 import pandas as pd
 from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict
 import mlflow
 from contextlib import asynccontextmanager
 
-from .prediction import PredictionHandler
-from .train_model import MLOpsHandler
-from .data_pipeline import DataHandler
-from .config import *
+from app.prediction import PredictionHandler
+from app.data_pipeline import DataHandler
+from app.config import *
 
-mlops = MLOpsHandler()
 predictHandler = PredictionHandler()
 dataHandler = DataHandler()
-
-
-def _retrain_background_job():
-    try:
-        summary = mlops.train_model()
-        if summary.get("promoted"):
-            refreshed = predictHandler.refresh_production_model()
-            print(f"Retraining finished and Production updated: {refreshed}")
-        else:
-            print(f"Retraining finished without promotion: {summary.get('promotion_context')}")
-    except Exception as exc:
-        print(f"Retraining failed: {exc}")
+background_tasks: BackgroundTasks
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,21 +29,32 @@ async def lifespan(app: FastAPI):
         if not prod_uri:
             raise ValueError("No Production model found")
         predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
-        print("✅ System Startup: Existing Production model loaded.")
+        print("System Startup: Existing Production model loaded.")
     except Exception:
-        print("❌ System Not Startup: Cannot find any Production Model")
-        mlops.train_startup_model()
-        prod_uri = predictHandler.find_any_production_model()
-        if prod_uri:
-            predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
-            print("the Production model is loaded")
-        else:
-            print("Critical: Failed to load Production model even after startup training.")
+        print("System : Cannot find any Production Model")
     
-    yield # App runs here
+    yield
+
     print("🛑 LIFESPAN: Shutting down...")
 
 app = FastAPI(lifespan=lifespan)
+
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Ensure report directory exists
+os.makedirs("report", exist_ok=True)
+
+# Mount the report directory to serve static files
+app.mount("/reports", StaticFiles(directory="report"), name="reports")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class TextRequest(BaseModel):
@@ -158,7 +157,6 @@ async def predict(file: UploadFile = File(...)):
             if drift_share > 0.5:
                 print(f"data drift is more than threshold - wait for data is labeled : {drift_share}")
                 drift_detected = True
-                FastAPI.post("/retrain")
             else:
                 print(f"data drift is not more than threshold - use the same model : {drift_share}")
 
@@ -180,7 +178,14 @@ async def predict(file: UploadFile = File(...)):
         },
     )
 
-@app.post("/retrain")
-async def trigger_retrain(background_tasks: BackgroundTasks):
-    background_tasks.add_task(_retrain_background_job)
+@app.get("/retrain")
+async def trigger_retrain():
+    prod_uri = predictHandler.find_any_production_model()
+    try:
+        if not prod_uri:
+            raise ValueError("No Production model found")
+        predictHandler.production_model = mlflow.sklearn.load_model(prod_uri)
+        print("System Startup: Existing Production model loaded.")
+    except Exception:
+        print("System : Cannot find any Production Model")
     return {"status": "Retraining scheduled"}
