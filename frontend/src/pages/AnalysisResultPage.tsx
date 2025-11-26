@@ -40,6 +40,21 @@ export default function AnalysisResultPage() {
         return data.slice(firstPageIndex, lastPageIndex);
     }, [data, currentPage, rowsPerPage]);
 
+    const sentimentCounts = useMemo(() => {
+        const counts = { positive: 0, negative: 0, neutral: 0 };
+        const sentimentHeader = headers.find(h => h.toLowerCase().includes('sentiment'));
+
+        if (sentimentHeader) {
+            data.forEach((row) => {
+                const val = row[sentimentHeader]?.toLowerCase().trim();
+                if (val === 'positive') counts.positive++;
+                else if (val === 'negative') counts.negative++;
+                else if (val === 'neutral') counts.neutral++;
+            });
+        }
+        return counts;
+    }, [data, headers]);
+
     const goToNextPage = () => {
         if (currentPage < totalPages) {
             setCurrentPage((prev) => prev + 1);
@@ -74,6 +89,21 @@ export default function AnalysisResultPage() {
                     </div>
                 </div>
 
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <h3 className="text-lg font-semibold text-green-700">Positive</h3>
+                        <p className="text-3xl font-bold text-green-800">{sentimentCounts.positive}</p>
+                    </div>
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <h3 className="text-lg font-semibold text-red-700">Negative</h3>
+                        <p className="text-3xl font-bold text-red-800">{sentimentCounts.negative}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h3 className="text-lg font-semibold text-gray-700">Neutral</h3>
+                        <p className="text-3xl font-bold text-gray-800">{sentimentCounts.neutral}</p>
+                    </div>
+                </div>
+
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-100">
@@ -92,15 +122,31 @@ export default function AnalysisResultPage() {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {currentTableData.map((row: any, rowIndex: number) => (
                                 <tr key={rowIndex} className="hover:bg-gray-50">
-                                    {headers.map((header, cellIndex) => (
-                                        <td
-                                            key={cellIndex}
-                                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 "
-                                        >
-                                            {row[header]}
-                                        </td>
+                                    {headers.map((header, cellIndex) => {
+                                        const isSentiment = header.toLowerCase().includes('sentiment');
+                                        const value = row[header];
+                                        let cellClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-500 ";
+                                        
+                                        if (isSentiment) {
+                                            const lowerVal = value?.toLowerCase().trim();
+                                            if (lowerVal === 'positive') {
+                                                cellClass += " bg-green-100 text-green-800 font-medium";
+                                            } else if (lowerVal === 'negative') {
+                                                cellClass += " bg-red-100 text-red-800 font-medium";
+                                            } else if (lowerVal === 'neutral') {
+                                                cellClass += " bg-gray-100 text-gray-800 font-medium";
+                                            }
+                                        }
 
-                                    ))}
+                                        return (
+                                            <td
+                                                key={cellIndex}
+                                                className={cellClass}
+                                            >
+                                                {value}
+                                            </td>
+                                        );
+                                    })}
                                 </tr>
                             ))}
                         </tbody>
