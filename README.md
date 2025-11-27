@@ -16,13 +16,13 @@ This project is created as part of the subject **CPE393 - MLOps**, demonstrating
 
 ## Initial Project
 
-for development in frontend service use ```dockerfile: Dockerfile.dev``
+for development in frontend service use ```dockerfile: Dockerfile.dev```
 
-- run ```docker-compose -f docker-compose.test.yml up -d``` to start mlflow, gcs-emulator
+- run ```docker-compose -f docker-compose.test.yml up -d``` to start mlflow, airflow, gcs-emulator, frontend, backend
 - run ```docker-compose -f docker-compose.test.yml down``` down all services
 - run ```docker-compose -f docker-compose.test.yml down -v``` down all services and delete all backup
 
-## Access UI
+## Access
 
 - <http://localhost:5173> - frontend
 - <http://localhost:8000> - mlflow
