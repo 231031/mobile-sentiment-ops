@@ -4,6 +4,7 @@ import icon from "../assets/csv-file-icon.png"; // เปลี่ยนเป�
 import upload from "../assets/upload.png";
 import Button from "./ui/Button";
 import { Loader2, Send } from "lucide-react";
+import { config } from "../config";
 
 export default function CsvUploadCard() {
   const [file, setFile] = useState<File | null>(null);
@@ -36,7 +37,7 @@ export default function CsvUploadCard() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/predict`, {
+      const res = await fetch(`${config.VITE_API_URL}/predict`, {
         method: "POST",
         body: formData,
       });

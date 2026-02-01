@@ -2,6 +2,7 @@ import icon from "../assets/text-box.png";
 import Button from "./ui/Button";
 import { Loader2, Send } from "lucide-react";
 import { useState } from "react";
+import { config } from "../config";
 
 export default function TextFieldAnalysis() {
 
@@ -23,7 +24,7 @@ export default function TextFieldAnalysis() {
         setIsAnalyzing(true);
 
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/predict_json`, {
+            const res = await fetch(`${config.VITE_API_URL}/predict_json`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

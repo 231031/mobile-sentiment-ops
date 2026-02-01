@@ -1,5 +1,6 @@
 import MetricCards from "../components/MetricCard";
 import ReportCarousel from "../components/ReportCarousel";
+import { config } from "../config";
 
 export default function DashBoard() {
    const reportImages = [
@@ -7,7 +8,7 @@ export default function DashBoard() {
       "eda_sentiment_brand_neutral_20251125_151047.png",
       "eda_sentiment_brand_positive_20251125_151046.png",
       "eda_sentiment_20251125_151042.png"
-   ].map(img => `${import.meta.env.VITE_API_URL}/reports/${img}`);
+   ].map(img => `${config.VITE_API_URL}/reports/${img}`);
 
    return (
     <div className="h-screen bg-gray-100 grid grid-cols-12 grid-rows-12 gap-4 py-10 ">

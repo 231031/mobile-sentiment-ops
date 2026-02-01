@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { config } from "../config";
 
 export default function MetricCards() {
   const [metrics, setMetrics] = useState([
@@ -11,9 +12,9 @@ export default function MetricCards() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        console.log("vite : ", import.meta.env.VITE_API_URL);
+        console.log("API URL: ", config.VITE_API_URL);
         const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/model/metrics`
+          `${config.VITE_API_URL}/model/metrics`
         );
         if (!res.ok) throw new Error("Failed to fetch metrics");
         const data = await res.json();
