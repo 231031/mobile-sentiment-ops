@@ -2,6 +2,15 @@ name: Deploy to Production
 
 on:
   workflow_call:
+    secrets:
+      GCS_BUCKET_NAME:
+        required: true
+      GCP_PROJECT_ID:
+        required: true
+      GOOGLE_APPLICATION_CREDENTIALS:
+        required: true
+      CREDENTIAL:
+        required: true
     inputs:
       docker_tag:
         description: "Docker image tag to deploy"
@@ -45,10 +54,10 @@ jobs:
           VITE_API_URL=${{ vars.VITE_API_URL }}
           EOF
 
-      - name: Create credential file
+      - name: Create backend credential file
+        working-directory: ./app
         run: |
-          mkdir -p ./app
-          echo '${{ secrets.CREDENTIAL }}' > ./app/credential.json
+          echo '${{ secrets.CREDENTIAL }}' > credential.json
 
       - name: Stop old containers
         run: |

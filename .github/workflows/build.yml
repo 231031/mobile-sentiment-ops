@@ -85,11 +85,10 @@ jobs:
           context: .
           file: app/Dockerfile.backend
           push: true
+          provenance: false
           tags: |
             ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
             ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/mlops_mbs_backend:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/mlops_mbs_backend:buildcache,mode=max
 
       - name: Build and Push frontend
         if: needs.changes.outputs.frontend == 'true'
@@ -98,13 +97,12 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          provenance: false
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL }}
           tags: |
             ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
             ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/mlops_mbs_frontend:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/mlops_mbs_frontend:buildcache,mode=max
 
       - name: Build and Push Airflow
         if: needs.changes.outputs.airflow == 'true'
@@ -113,8 +111,7 @@ jobs:
           context: ./airflow
           file: ./airflow/Dockerfile.airflow
           push: true
+          provenance: false
           tags: |
             ghcr.io/${{ github.repository }}/mlops_mbs_airflow:${{ steps.set_tag.outputs.tag }}
             ghcr.io/${{ github.repository }}/mlops_mbs_airflow:latest
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/mlops_mbs_airflow:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/mlops_mbs_airflow:buildcache,mode=max
