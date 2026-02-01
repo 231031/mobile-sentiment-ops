@@ -46,7 +46,6 @@ jobs:
           AIRFLOW__API__BASE_URL=${{ vars.AIRFLOW__API__BASE_URL }}
           AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=${{ vars.AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX }}
           AIRFLOW_UID=$(id -u)
-          AIRFLOW_GID=$(id -g)
           MLFLOW_TRACKING_URI=${{ vars.MLFLOW_TRACKING_URI }}
           REPORTS_DIR=${{ vars.REPORTS_DIR }}
           INITIAL_DATA_PATH=${{ vars.INITIAL_DATA_PATH }}
