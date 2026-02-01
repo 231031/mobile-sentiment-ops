@@ -7,7 +7,7 @@ config
 logs
 downloads
 report
-*/__pycache__
-*/*/__pycache__
 .venv
 mlruns
+*.pyc
+__pycache__

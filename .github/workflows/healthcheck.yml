@@ -1,0 +1,33 @@
+name: Health Check
+
+on:
+  workflow_call:
+
+jobs:
+  healthcheck:
+    name: Backend Health Check
+    runs-on: self-hosted
+    steps:
+      - name: Check Backend Health
+        env:
+          TARGET_IP: ${{ vars.VM_IP }}
+        run: |
+          echo "Checking backend health at http://$TARGET_IP/backend/healthcheck"
+          max_attempts=12
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" http://$TARGET_IP/backend/healthcheck 2>/dev/null || echo "000")
+            
+            if [ "$response" = "200" ]; then
+              echo "✓ Health check passed!"
+              exit 0
+            fi
+            
+            echo "Attempt $attempt/$max_attempts: Received status $response"
+            [ $attempt -lt $max_attempts ] && sleep 5
+            attempt=$((attempt + 1))
+          done
+          
+          echo "✗ Health check failed after 60 seconds"
+          exit 1

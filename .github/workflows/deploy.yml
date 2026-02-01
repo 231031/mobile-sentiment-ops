@@ -1,0 +1,78 @@
+name: Deploy to Production
+
+on:
+  workflow_call:
+    inputs:
+      docker_tag:
+        description: "Docker image tag to deploy"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    name: Deploy Stack
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup environment file
+        run: |
+          cat > .env << 'EOF'
+          GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}
+          GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          AIRFLOW__WEBSERVER__BASE_URL=${{ vars.AIRFLOW__WEBSERVER__BASE_URL }}
+          AIRFLOW__API__BASE_URL=${{ vars.AIRFLOW__API__BASE_URL }}
+          AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=${{ vars.AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX }}
+          AIRFLOW_UID=${{ vars.AIRFLOW_UID }}
+          MLFLOW_TRACKING_URI=${{ vars.MLFLOW_TRACKING_URI }}
+          REPORTS_DIR=${{ vars.REPORTS_DIR }}
+          INITIAL_DATA_PATH=${{ vars.INITIAL_DATA_PATH }}
+          DOCKER_TAG=${{ inputs.docker_tag }}
+          BACKEND_URL=${{ vars.BACKEND_URL }}
+          VITE_API_URL=${{ vars.VITE_API_URL }}
+          EOF
+
+      - name: Create credential file
+        run: |
+          mkdir -p ./app
+          echo '${{ secrets.CREDENTIAL }}' > ./app/credential.json
+
+      - name: Stop old containers
+        run: |
+          docker compose -p mlops -f docker-compose.prod.yml down --remove-orphans || true
+
+      - name: Pull and deploy
+        run: |
+          docker compose -p mlops -f docker-compose.prod.yml pull
+          docker compose -p mlops -f docker-compose.prod.yml up -d
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for services to be healthy..."
+          sleep 10
+          
+          # Check if backend and frontend are running
+          if docker compose -p mlops -f docker-compose.prod.yml ps --status running | grep -E 'backend|frontend'; then
+            echo "Services are running successfully"
+          else
+            echo "ERROR: Services failed to start"
+            docker compose -p mlops -f docker-compose.prod.yml logs
+            exit 1
+          fi
+
+      - name: Cleanup dangling images
+        run: |
+          docker image prune -f --filter "dangling=true"

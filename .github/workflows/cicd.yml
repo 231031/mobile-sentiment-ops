@@ -1,181 +1,32 @@
-name: Deploy MLOps Stack
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
-      - main # Your main branch
+      - main
+    paths:
+      - 'app/**'
+      - 'frontend/**'
+      - 'airflow/**'
+      - '.github/workflows/*.yml'
+      - 'docker-compose.prod.yml'
 
 jobs:
   build:
-    name: Build and Push Images
-    runs-on: self-hosted
+    uses: ./.github/workflows/build.yml
     permissions:
       contents: read
       packages: write
 
-    steps:
-      - name: Fix workspace permissions
-        run: |
-          sudo chown -R $USER:$USER "$RUNNER_WORKSPACE"
-
-      - name: clean unncessary files to save space
-        run: |
-          docker image prune -f
-          sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php /etc/sudo apt/sources.list.d
-          sudo apt -y autoremove --purge
-          sudo apt -y autoclean
-          sudo apt clean
-          rm --recursive --force "$AGENT_TOOLSDIRECTORY"
-
-      - name: Checkout Source
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set Docker tag output (short SHA with timestamp)
-        id: set_tag
-        run: |
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          TAG="$SHORT_SHA-$TIMESTAMP"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-
-      - name: Create .env file in frontend
-        working-directory: ./
-        run: |
-          # This creates the .env file from scratch with all required values
-          echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' > .env
-
-      # Build backend & frontend
-      - name: Build backend & frontend images
-        run: |
-          docker compose -p mlops -f docker-compose.test.yml build backend frontend
-
-      # Tag & push backend
-      - name: Push backend images
-        run: |
-          docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
-          docker tag mlops_backend:latest ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
-          docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:latest
-          docker push ghcr.io/${{ github.repository }}/mlops_mbs_backend:${{ steps.set_tag.outputs.tag }}
-
-      # Tag & push frontend
-      - name: Push frontend images
-        run: |
-          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
-          docker tag mlops_frontend:latest ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
-          docker push ghcr.io/${{ github.repository }}/mlops_mbs_frontend:latest
-          docker push ghcr.io/${{ github.repository }}/mlops_mbs_frontend:${{ steps.set_tag.outputs.tag }}
-
-    outputs:
-      docker_tag: ${{ steps.set_tag.outputs.tag }} 
-
   deploy:
-    name: Deploy to Production
     needs: build
-    runs-on: self-hosted
+    uses: ./.github/workflows/deploy.yml
+    with:
+      docker_tag: ${{ needs.build.outputs.docker_tag }}
     permissions:
       contents: read
       packages: read
 
-    steps:
-      - name: Checkout Source
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # --- UPDATED: Create .env file for deployment ---
-      - name: Create .env file
-        working-directory: ./
-        run: |
-          # This creates the .env file from scratch with all required values
-          echo 'GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}' > .env
-          echo 'GOOGLE_APPLICATION_CREDENTIALS=${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}' >> .env
-          echo 'GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}' >> .env
-          echo 'AIRFLOW__WEBSERVER__BASE_URL=${{ vars.AIRFLOW__WEBSERVER__BASE_URL }}' >> .env
-          echo 'AIRFLOW__API__BASE_URL=${{ vars.AIRFLOW__API__BASE_URL }}' >> .env
-          echo 'AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=${{ vars.AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX }}' >> .env
-          echo 'AIRFLOW_UID=${{ vars.AIRFLOW_UID }}' >> .env
-          echo 'MLFLOW_TRACKING_URI=${{ vars.MLFLOW_TRACKING_URI }}' >> .env
-          echo 'REPORTS_DIR=${{ vars.REPORTS_DIR }}' >> .env
-          echo 'INITIAL_DATA_PATH=${{ vars.INITIAL_DATA_PATH }}' >> .env
-          echo 'DOCKER_TAG=${{ needs.build.outputs.docker_tag }}' >> .env
-          echo 'BACKEND_URL=${{ vars.BACKEND_URL }}' >> .env
-          echo 'VITE_API_URL=${{ vars.VITE_API_URL }}' >> .env
-
-      - name: Create credential.json file
-        working-directory: ./app
-        run: |
-          echo '${{ secrets.CREDENTIAL }}' > credential.json
-              
-      # --- UPDATED: Use docker-compose.prod.yml ---
-      - name: Delete old docker container
-        run: docker compose -p mlops -f docker-compose.prod.yml down
-
-      - name: Deploy to server
-        working-directory: ./
-        run: |
-          # This command is now correct!
-          # It pulls the new backend/frontend images using the DOCKER_TAG from the .env file
-          docker compose -p mlops -f docker-compose.prod.yml pull backend frontend
-          
-          # This brings up the entire stack, including the new images
-          docker compose -p mlops -f docker-compose.prod.yml up -d
-
-      # --- UPDATED: Better check and cleanup ---
-      - name: Check and Delete unused images
-        run: |
-          sleep 5
-          echo "Checking running containers for project 'mlops'..."
-          
-          # This command checks if services 'backend' and 'frontend' are in a 'running' state
-          if docker compose -p mlops -f docker-compose.prod.yml ps --status running | grep 'backend'; then
-            
-            echo "Containers are running successfully. Proceeding to cleanup..."
-            # This is the safest way to remove old, unused images
-            docker image prune -f
-          
-          else
-            echo "Deployment check failed: Containers not running. Skipping image cleanup."
-            docker compose -p mlops -f docker-compose.prod.yml ps
-            exit 1
-          fi
-
   healthcheck:
-    name: Backend healthcheck
     needs: deploy
-    runs-on: self-hosted
-    steps: 
-      - name: Test Backend Health Endpoint
-        env:
-          TARGET_IP: ${{ vars.VM_IP }} 
-        run: |
-          echo "Waiting for Backend to respond at http://$TARGET_IP/backend/healthcheck ..."
-          for i in {1..12}; do
-            response=$(curl -s -o /dev/null -w "%{http_code}" http://$TARGET_IP/backend/healthcheck)
-            
-            if [ "$response" == "200" ]; then
-              echo "Healthcheck passed! Status code: $response"
-              exit 0
-            else
-              echo "Attempt $i: Received status $response. Retrying in 5 seconds..."
-              sleep 5
-            fi
-          done
-
-          echo "Healthcheck failed after 60 seconds."
-          curl -v http://$TARGET_IP/backend/healthcheck
-          exit 1
+    uses: ./.github/workflows/healthcheck.yml
